@@ -15,6 +15,13 @@ let classCenterMarker = null;
 const alertBox = document.getElementById('alert-box');
 
 const infoPanel = document.getElementById('student-info-panel');
+const studentFormFields = document.getElementById('student-form-fields');
+const studentProfileView = document.getElementById('student-profile-view');
+const profileDisplayName = document.getElementById('profile-display-name');
+const profileDisplayRoll = document.getElementById('profile-display-roll');
+const profileDisplayEmail = document.getElementById('profile-display-email');
+const btnStudentLogout = document.getElementById('btn-student-logout');
+
 const studentName = document.getElementById('student-name');
 const studentRoll = document.getElementById('student-roll');
 const studentEmail = document.getElementById('student-email');
@@ -53,6 +60,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Event Wireup
     if (btnRegisterStudent) btnRegisterStudent.addEventListener('click', registerStudent);
     if (btnVerifyStatus) btnVerifyStatus.addEventListener('click', verifyStatus);
+    if (btnStudentLogout) btnStudentLogout.addEventListener('click', logoutStudent);
     btnGetStudentGps.addEventListener('click', authorizeGPS);
     btnToggleSelfie.addEventListener('click', toggleSelfieCamera);
     btnCaptureSelfie.addEventListener('click', takeSelfieSnapshot);
@@ -124,12 +132,19 @@ async function checkStatus(rollNumber) {
                 if (data.name) {
                     studentName.value = data.name;
                     localStorage.setItem('attendance_student_name', data.name);
+                    profileDisplayName.textContent = data.name;
                 }
                 if (data.email) {
                     studentEmail.value = data.email;
                     localStorage.setItem('attendance_student_email', data.email);
+                    profileDisplayEmail.textContent = data.email;
                 }
                 localStorage.setItem('attendance_student_roll', rollNumber);
+                profileDisplayRoll.textContent = rollNumber;
+                
+                // Swap views: hide inputs, show profile panel
+                studentFormFields.style.display = 'none';
+                studentProfileView.style.display = 'flex';
                 
                 showSubsequentPanels();
                 authorizeGPS();
@@ -138,13 +153,19 @@ async function checkStatus(rollNumber) {
                 statusMsg.style.background = 'rgba(245, 158, 11, 0.1)';
                 statusMsg.style.color = '#d97706';
                 statusMsg.style.border = '1px solid rgba(245, 158, 11, 0.2)';
+                
+                studentFormFields.style.display = 'block';
+                studentProfileView.style.display = 'none';
                 hideSubsequentPanels();
             }
         } else {
-            statusMsg.textContent = `❌ Roll number is not registered yet. Please enter your name and click Register.`;
+            statusMsg.textContent = `❌ Roll number is not registered yet. Please enter your name, email, and click Register.`;
             statusMsg.style.background = 'rgba(239, 68, 68, 0.1)';
             statusMsg.style.color = '#ef4444';
             statusMsg.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+            
+            studentFormFields.style.display = 'block';
+            studentProfileView.style.display = 'none';
             hideSubsequentPanels();
         }
     } catch (err) {
@@ -152,6 +173,26 @@ async function checkStatus(rollNumber) {
         statusMsg.textContent = '⚠ Network error verifying status. Please try again.';
         hideSubsequentPanels();
     }
+}
+
+// Student Switch Account (Sign Out)
+function logoutStudent() {
+    localStorage.removeItem('attendance_student_roll');
+    localStorage.removeItem('attendance_student_name');
+    localStorage.removeItem('attendance_student_email');
+    
+    studentRoll.value = '';
+    studentName.value = '';
+    studentEmail.value = '';
+    
+    studentFormFields.style.display = 'block';
+    studentProfileView.style.display = 'none';
+    
+    const statusMsg = document.getElementById('registration-status-msg');
+    statusMsg.style.display = 'none';
+    
+    hideSubsequentPanels();
+    showAlert('Signed out successfully. Please register or log in.', 'info');
 }
 
 // Register student account

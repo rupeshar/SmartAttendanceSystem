@@ -17,6 +17,7 @@ const alertBox = document.getElementById('alert-box');
 const infoPanel = document.getElementById('student-info-panel');
 const studentName = document.getElementById('student-name');
 const studentRoll = document.getElementById('student-roll');
+const studentEmail = document.getElementById('student-email');
 const btnRegisterStudent = document.getElementById('btn-register-student');
 const btnVerifyStatus = document.getElementById('btn-verify-status');
 
@@ -74,10 +75,12 @@ function initCameraFeatureCheck() {
 async function loadProfile() {
     const savedName = localStorage.getItem('attendance_student_name');
     const savedRoll = localStorage.getItem('attendance_student_roll');
+    const savedEmail = localStorage.getItem('attendance_student_email');
     
     if (savedRoll) {
         studentRoll.value = savedRoll;
         if (savedName) studentName.value = savedName;
+        if (savedEmail) studentEmail.value = savedEmail;
         
         await checkStatus(savedRoll);
     } else {
@@ -122,6 +125,10 @@ async function checkStatus(rollNumber) {
                     studentName.value = data.name;
                     localStorage.setItem('attendance_student_name', data.name);
                 }
+                if (data.email) {
+                    studentEmail.value = data.email;
+                    localStorage.setItem('attendance_student_email', data.email);
+                }
                 localStorage.setItem('attendance_student_roll', rollNumber);
                 
                 showSubsequentPanels();
@@ -151,9 +158,10 @@ async function checkStatus(rollNumber) {
 async function registerStudent() {
     const roll = studentRoll.value.trim();
     const name = studentName.value.trim();
+    const email = studentEmail.value.trim();
     
-    if (!roll || !name) {
-        showAlert('Please enter both Roll Number and Full Name to register.', 'error');
+    if (!roll || !name || !email) {
+        showAlert('Please enter Roll Number, Full Name, and Email to register.', 'error');
         return;
     }
     
@@ -167,13 +175,14 @@ async function registerStudent() {
         const response = await fetch('/api/student/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rollNumber: roll, name })
+            body: JSON.stringify({ rollNumber: roll, name, email })
         });
         
         const data = await response.json();
         if (response.ok) {
             localStorage.setItem('attendance_student_roll', roll);
             localStorage.setItem('attendance_student_name', name);
+            localStorage.setItem('attendance_student_email', email);
             showAlert('Registration request submitted!', 'success');
             await checkStatus(roll);
         } else {

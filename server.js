@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import os from 'os';
 import QRCode from 'qrcode';
 import { fileURLToPath } from 'url';
+import nodemailer from 'nodemailer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +23,92 @@ const DB_FILE = path.join(__dirname, 'db.json');
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// Nodemailer Transporter Setup
+let transporter = null;
+if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '465'),
+        secure: process.env.SMTP_SECURE !== 'false',
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+        }
+    });
+    console.log('SMTP Email Transporter configured via Environment variables.');
+} else {
+    nodemailer.createTestAccount().then(account => {
+        transporter = nodemailer.createTransport({
+            host: 'smtp.ethereal.email',
+            port: 587,
+            secure: false,
+            auth: {
+                user: account.user,
+                pass: account.pass
+            }
+        });
+        console.log(`===================================================`);
+        console.log(`Ethereal Email system configured for local testing.`);
+        console.log(`Test Mail Account: ${account.user}`);
+        console.log(`===================================================`);
+    }).catch(err => {
+        console.warn('Failed to configure test Ethereal account, running in log-only mode:', err.message);
+    });
+}
+
+// Function to send confirmation email
+async function sendAttendanceEmail(toEmail, studentName, rollNumber, className, timestamp) {
+    if (!toEmail) return;
+    const dateStr = new Date(timestamp).toLocaleString();
+    const mailOptions = {
+        from: '"SmartAttend System" <no-reply@smartattend.com>',
+        to: toEmail,
+        subject: `🎯 Attendance Marked: Present for ${className}`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background: #fdfdfd; color: #333;">
+                <h2 style="color: #7c3aed; text-align: center; margin-bottom: 20px;">SmartAttend Confirmation</h2>
+                <p>Hello <strong>${studentName}</strong>,</p>
+                <p>Your attendance has been successfully recorded as <strong>Present</strong>. Details are shown below:</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <tr style="background: #f7f7f7;">
+                        <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #eee;">Roll Number / ID:</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;">${rollNumber}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #eee;">Class / Session:</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;">${className}</td>
+                    </tr>
+                    <tr style="background: #f7f7f7;">
+                        <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #eee;">Time Checked In:</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;">${dateStr}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #eee;">Status:</td>
+                        <td style="padding: 10px; color: #10b981; font-weight: bold; border-bottom: 1px solid #eee;">Present (Geo-Verified)</td>
+                    </tr>
+                </table>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                <p style="font-size: 0.85rem; color: #888; text-align: center;">This is an automated verification receipt. Thank you for using SmartAttend.</p>
+            </div>
+        `
+    };
+
+    if (transporter) {
+        try {
+            const info = await transporter.sendMail(mailOptions);
+            console.log(`Email confirmation sent to ${toEmail}. Message ID: ${info.messageId}`);
+            const previewUrl = nodemailer.getTestMessageUrl(info);
+            if (previewUrl) {
+                console.log(`[Ethereal Email Preview URL]: ${previewUrl}`);
+            }
+        } catch (err) {
+            console.error(`Failed to send email to ${toEmail}:`, err.message);
+        }
+    } else {
+        console.log(`[SIMULATED EMAIL LOG] To: ${toEmail} | Subject: ${mailOptions.subject}`);
+    }
 }
 
 // Get local network IP for mobile accessibility
@@ -139,14 +226,19 @@ class JSONDatabase {
         );
     }
 
-    registerStudent(rollNumber, name) {
+    registerStudent(rollNumber, name, email) {
         const cleanRoll = rollNumber.trim().toUpperCase();
         const exists = this.data.studentUsers.some(s => s.rollNumber === cleanRoll);
         if (exists) {
             throw new Error('Student roll number already registered.');
         }
         // Newly registered students are pending approval
-        this.data.studentUsers.push({ rollNumber: cleanRoll, name: name.trim(), approved: false });
+        this.data.studentUsers.push({ 
+            rollNumber: cleanRoll, 
+            name: name.trim(), 
+            email: email.trim().toLowerCase(), 
+            approved: false 
+        });
         this.save();
     }
 
@@ -259,15 +351,15 @@ app.post('/api/faculty/login', (req, res) => {
 
 // Student Registration
 app.post('/api/student/register', (req, res) => {
-    const { rollNumber, name } = req.body;
-    if (!rollNumber || !name) {
-        return res.status(400).json({ error: 'Roll number and student name are required.' });
+    const { rollNumber, name, email } = req.body;
+    if (!rollNumber || !name || !email) {
+        return res.status(400).json({ error: 'Roll number, student name, and email are required.' });
     }
-    if (rollNumber.trim().length < 2 || name.trim().length < 2) {
-        return res.status(400).json({ error: 'Please enter a valid roll number and name.' });
+    if (rollNumber.trim().length < 2 || name.trim().length < 2 || !email.includes('@')) {
+        return res.status(400).json({ error: 'Please enter a valid roll number, name, and email address.' });
     }
     try {
-        db.registerStudent(rollNumber, name);
+        db.registerStudent(rollNumber, name, email);
         res.json({ success: true, message: 'Registration submitted! Please wait for Admin approval.' });
     } catch (err) {
         res.status(400).json({ error: err.message });
@@ -285,7 +377,7 @@ app.get('/api/student/status', (req, res) => {
     if (!student) {
         return res.json({ registered: false, approved: false, status: 'not_found' });
     }
-    res.json({ registered: true, approved: student.approved, name: student.name, status: student.approved ? 'approved' : 'pending' });
+    res.json({ registered: true, approved: student.approved, name: student.name, email: student.email || '', status: student.approved ? 'approved' : 'pending' });
 });
 
 // Admin Login
@@ -504,6 +596,13 @@ app.post('/api/attendance/submit', (req, res) => {
 
     try {
         db.addRecord(record);
+        
+        // Trigger email notification to the student's registered email
+        const student = db.data.studentUsers.find(s => s.rollNumber === rollNumber.trim().toUpperCase());
+        if (student && student.email) {
+            sendAttendanceEmail(student.email, studentName, rollNumber, sessionId, record.timestamp);
+        }
+        
         res.json({ message: 'Attendance marked successfully!', record });
     } catch (err) {
         res.status(400).json({ error: err.message });

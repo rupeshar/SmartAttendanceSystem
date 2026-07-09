@@ -273,7 +273,7 @@ app.post('/api/admin/login', (req, res) => {
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password are required.' });
     }
-    if (username.trim() === 'admin' && password === 'SYS') {
+    if (username.trim() === 'rupesh' && password === 'rupesh@12') {
         res.json({ success: true, message: 'Admin logged in successfully!' });
     } else {
         res.status(401).json({ error: 'Access Denied: Invalid Admin credentials.' });

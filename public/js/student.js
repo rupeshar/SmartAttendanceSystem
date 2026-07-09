@@ -228,14 +228,12 @@ function authorizeGPS() {
 
     navigator.geolocation.getCurrentPosition(
         (position) => {
-            if (!isMockLocation) {
-                studentLatitude = position.coords.latitude;
-                studentLongitude = position.coords.longitude;
-                updateLocationUI(studentLatitude, studentLongitude);
-            }
+            studentLatitude = position.coords.latitude;
+            studentLongitude = position.coords.longitude;
+            updateLocationUI(studentLatitude, studentLongitude);
             
             gpsIndicator.className = 'status-indicator status-active';
-            gpsStatusText.textContent = isMockLocation ? 'GPS Mocked' : 'GPS Connected';
+            gpsStatusText.textContent = 'GPS Connected';
             btnGetStudentGps.textContent = '📍 Get Updated Location';
             btnGetStudentGps.disabled = false;
             showAlert('GPS Location successfully acquired!', 'success');

@@ -681,3 +681,39 @@ footer {
 .pulse-glow {
     animation: pulse 2s infinite ease-in-out;
 }
+
+/* Fingerprint Logo Styling */
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: var(--text-main);
+    transition: transform var(--transition-speed);
+}
+.logo-icon-svg {
+    color: #7c3aed; /* purple */
+    display: block;
+}
+.logo-text-wrapper {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+}
+.logo-title {
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text-main);
+}
+.logo-title span {
+    color: #7c3aed; /* Attend is purple */
+}
+.logo-subtitle {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.15rem;
+}

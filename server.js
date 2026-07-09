@@ -172,6 +172,12 @@ class JSONDatabase {
         }
         this.save();
     }
+
+    clearAllUsers() {
+        this.data.facultyUsers = [];
+        this.data.studentUsers = [];
+        this.save();
+    }
 }
 
 const db = new JSONDatabase(DB_FILE);
@@ -317,6 +323,16 @@ app.post('/api/admin/approve', (req, res) => {
         }
     } catch (err) {
         res.status(400).json({ error: err.message });
+    }
+});
+
+// Clear All Users (Reset Database)
+app.post('/api/admin/clear-all', (req, res) => {
+    try {
+        db.clearAllUsers();
+        res.json({ success: true, message: 'All faculty and student registrations have been cleared.' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to reset registrations database.' });
     }
 });
 

@@ -121,6 +121,29 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'index.html';
     });
 
+    // Reset Database registrations
+    const btnReset = document.getElementById('btn-admin-reset');
+    if (btnReset) {
+        btnReset.addEventListener('click', async () => {
+            if (!confirm('⚠ WARNING: This will permanently delete ALL registered faculty and student accounts. Already logged-in users will be locked out. Are you sure you want to proceed?')) {
+                return;
+            }
+            try {
+                const response = await fetch('/api/admin/clear-all', { method: 'POST' });
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message || 'Database reset successfully.');
+                    loadDirectory();
+                } else {
+                    alert(data.error || 'Failed to clear database.');
+                }
+            } catch (err) {
+                console.error('Reset database error:', err);
+                alert('Server network error. Failed to clear database.');
+            }
+        });
+    }
+
     // Helper escape function
     function escapeHtml(str) {
         return str.replace(/&/g, '&amp;')

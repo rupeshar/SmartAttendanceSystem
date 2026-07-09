@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Portal | Smart Attendance</title>
+    <link rel="stylesheet" href="css/styles.css?v=2.0">
+    <!-- Leaflet Map CSS and JS CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- HTML5 QR Code Scanner Library from CDN -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <a href="index.html" class="logo">
+                <div class="logo-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><rect x="7" y="7" width="3" height="3"/><rect x="14" y="7" width="3" height="3"/><rect x="7" y="14" width="3" height="3"/><rect x="14" y="14" width="3" height="3"/></svg>
+                </div>
+                <span>Smart<span class="gradient-text">Attendance</span></span>
+            </a>
+        </div>
+    </header>
+
+    <main style="max-width: 700px;">
+        
+        <!-- Response Alerts -->
+        <div id="alert-box" style="display: none;"></div>
+
+        <!-- Step 1: Student Information -->
+        <div class="panel-card" id="student-info-panel">
+            <h2 class="panel-title">1. Student Details</h2>
+            <div class="form-group">
+                <label for="student-name">Full Name</label>
+                <input type="text" id="student-name" class="input-field" placeholder="e.g. John Doe">
+            </div>
+            <div class="form-group">
+                <label for="student-roll">Roll Number / ID</label>
+                <input type="text" id="student-roll" class="input-field" placeholder="e.g. CS2026045">
+            </div>
+            <button type="button" class="btn btn-primary" id="btn-save-profile" style="width: 100%;">
+                💾 Save Profile
+            </button>
+        </div>
+
+        <!-- Step 2: Location Verification -->
+        <div class="panel-card" id="location-panel" style="display: none;">
+            <h2 class="panel-title">
+                2. Geolocation Tracking
+                <span class="location-pill">
+                    <span class="status-indicator status-inactive" id="gps-indicator"></span>
+                    <span id="gps-status-text">GPS Off</span>
+                </span>
+            </h2>
+            
+            <div id="gps-info" style="margin-bottom: 1.25rem;">
+                <p style="font-size: 0.9rem; color: var(--text-muted);">
+                    The system requires your physical presence inside the classroom boundaries to record attendance.
+                </p>
+            </div>
+
+            <button type="button" class="btn btn-secondary" id="btn-get-student-gps" style="width: 100%;">
+                📍 Authorize & Get GPS Location
+            </button>
+
+            <div id="student-coords-display" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; font-size: 0.9rem;">
+                Detected Latitude: <strong id="student-lat">--</strong><br>
+                Detected Longitude: <strong id="student-lng">--</strong>
+            </div>
+
+            <!-- Student Map visualization -->
+            <div id="student-map" style="height: 180px; border-radius: 12px; margin-top: 1rem; border: 1px solid var(--border-color); display: none; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);"></div>
+
+            <!-- Testing GPS Coordinates Mock Box -->
+            <div class="mock-panel">
+                <h4>Local Testing GPS Mocking</h4>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                    Since browsers block geolocation on insecure networks or require permissions, mock your coordinates to test geofencing boundaries.
+                </p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="mock-lat">Mock Latitude</label>
+                        <input type="number" step="any" id="mock-lat" class="input-field" placeholder="Lat">
+                    </div>
+                    <div class="form-group">
+                        <label for="mock-lng">Mock Longitude</label>
+                        <input type="number" step="any" id="mock-lng" class="input-field" placeholder="Lng">
+                    </div>
+                </div>
+                <div class="mock-btn-row">
+                    <button class="btn btn-outline btn-xs" id="btn-mock-apply">Apply Mock Coordinates</button>
+                    <button class="btn btn-outline btn-xs" id="btn-mock-clear">Clear Mock</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Face Verification -->
+        <div class="panel-card" id="face-panel" style="display: none;">
+            <h2 class="panel-title">
+                3. Face Verification / Selfie
+                <span class="location-pill">
+                    <span class="status-indicator status-inactive" id="face-indicator"></span>
+                    <span id="face-status-text">Webcam Off</span>
+                </span>
+            </h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+                Align your face and click "Take Selfie Snapshot" below to capture your verification photo.
+            </p>
+            <div class="camera-box" style="aspect-ratio: 4/3; background: #000; overflow: hidden; margin-bottom: 1.25rem; border: 1px solid var(--border-color); position: relative;">
+                <video id="selfie-video" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+                <img id="selfie-preview-img" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                <canvas id="selfie-canvas" style="display: none;"></canvas>
+            </div>
+            <button type="button" class="btn btn-outline" id="btn-toggle-selfie" style="width: 100%;">
+                🎥 Start Selfie Camera
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-capture-selfie" style="width: 100%; margin-top: 0.75rem; display: none; background: var(--secondary);">
+                📸 Take Selfie Snapshot
+            </button>
+        </div>
+
+        <!-- Step 4: QR Code Verification -->
+        <div class="panel-card" id="scan-panel" style="display: none;">
+            <h2 class="panel-title">4. Scan Classroom QR Code</h2>
+            
+            <!-- Real QR Code Camera Interface -->
+            <div id="camera-section">
+                <div class="camera-box" id="scanner-wrapper">
+                    <div id="reader"></div>
+                    <div class="camera-placeholder" id="scanner-placeholder">
+                        <i style="font-style: normal; font-size: 3rem;">📷</i>
+                        <p>Webcam Scanner Screen</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-outline" id="btn-toggle-camera" style="width: 100%; margin-bottom: 1.5rem;">
+                    🎥 Start Camera Scanner
+                </button>
+            </div>
+
+            <!-- Single Machine Testing Simulator Box -->
+            <div class="mock-panel scanner-simulate-card">
+                <h4>Simulated Scan (Single Desktop Testing)</h4>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                    No camera or phone? Enter the Class Session ID (e.g., CS101) to simulate scanning the refreshed QR code dynamically.
+                </p>
+                
+                <div class="form-group">
+                    <label for="session-id-input">Session / Class ID</label>
+                    <input type="text" id="session-id-input" class="input-field" placeholder="e.g. CS101">
+                </div>
+                
+                <button type="button" class="btn btn-primary" id="btn-submit-attendance" style="width: 100%;">
+                    ✅ Submit Attendance Record
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Smart Attendance Management System. All rights reserved.</p>
+    </footer>
+
+    <script src="js/student.js?v=2.0"></script>
+</body>
+</html>

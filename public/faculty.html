@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Dashboard | Smart Attendance</title>
+    <link rel="stylesheet" href="css/styles.css?v=2.0">
+    <!-- Leaflet Map CSS and JS CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <a href="index.html" class="logo">
+                <div class="logo-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><rect x="7" y="7" width="3" height="3"/><rect x="14" y="7" width="3" height="3"/><rect x="7" y="14" width="3" height="3"/><rect x="14" y="14" width="3" height="3"/></svg>
+                </div>
+                <span>Smart<span class="gradient-text">Attendance</span></span>
+            </a>
+        </div>
+    </header>
+
+    <main>
+        <div class="dashboard-grid">
+            
+            <!-- Left Side: Session controls & QR display -->
+            <div class="left-column">
+                
+                <!-- Session Controller -->
+                <div class="panel-card" id="session-setup-panel">
+                    <h2 class="panel-title">
+                        Start Attendance Session
+                        <span class="location-pill">
+                            <span class="status-indicator status-inactive" id="session-indicator"></span>
+                            <span id="session-status-text">Inactive</span>
+                        </span>
+                    </h2>
+                    
+                    <div id="setup-form">
+                        <div class="form-group">
+                            <label for="session-id">Session / Class ID</label>
+                            <input type="text" id="session-id" class="input-field" placeholder="e.g. CS101-Lec1" value="CS101">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="class-lat">Classroom Latitude</label>
+                                <input type="number" step="any" id="class-lat" class="input-field" placeholder="e.g. 12.9716">
+                            </div>
+                            <div class="form-group">
+                                <label for="class-lng">Classroom Longitude</label>
+                                <input type="number" step="any" id="class-lng" class="input-field" placeholder="e.g. 77.5946">
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <button type="button" class="btn btn-outline btn-xs" id="btn-get-gps" style="width: 100%;">
+                                📍 Use Current Device Location
+                            </button>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="class-radius">Allowed Radius (m)</label>
+                                <input type="number" id="class-radius" class="input-field" value="50" min="5">
+                            </div>
+                            <div class="form-group">
+                                <label for="session-duration">Duration (mins)</label>
+                                <input type="number" id="session-duration" class="input-field" value="15" min="1">
+                            </div>
+                        </div>
+                        
+                        <button type="button" class="btn btn-primary" id="btn-start-session" style="width: 100%; margin-top: 1rem;">
+                            🚀 Start Attendance Session
+                        </button>
+                    </div>
+
+                    <div id="active-session-info" style="display: none;">
+                        <div class="alert alert-success">
+                            <div>
+                                <strong>Session Running!</strong><br>
+                                Session ID: <span id="info-session-id" style="color: var(--secondary); font-weight: bold;">--</span><br>
+                                Center Coords: <span id="info-coords">--</span><br>
+                                Radius: <span id="info-radius">--</span> meters<br>
+                                Expires in: <span id="info-expiry-timer">--</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Map visualization -->
+                        <div id="faculty-map" style="height: 220px; border-radius: 12px; margin-bottom: 1.25rem; border: 1px solid var(--border-color); box-shadow: inset 0 0 10px rgba(0,0,0,0.5);"></div>
+
+                        <button type="button" class="btn btn-outline" id="btn-stop-session" style="width: 100%; border-color: var(--accent-red); color: var(--accent-red);">
+                            🛑 Stop Current Session
+                        </button>
+                    </div>
+
+                    <!-- Mock Coordinates Helper -->
+                    <div class="mock-panel">
+                        <h4>Local Testing Coordinate Presets</h4>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                            Quickly set coordinates to test matching or mismatched student scans.
+                        </p>
+                        <div class="mock-btn-row">
+                            <button class="btn btn-outline btn-xs" onclick="setPresetCoords(12.9716, 77.5946)">Bangalore City Center</button>
+                            <button class="btn btn-outline btn-xs" onclick="setPresetCoords(0, 0)">Zero Coordinates (Null Island)</button>
+                            <button class="btn btn-outline btn-xs" onclick="setPresetCoords(28.6139, 77.2090)">New Delhi (Campus Gate)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Refreshing QR Code Display -->
+                <div class="panel-card" id="qr-panel" style="display: none;">
+                    <h2 class="panel-title">Dynamic QR Code (Refreshes Live)</h2>
+                    <div class="qr-container">
+                        <div class="qr-image-wrapper">
+                            <img src="" id="qr-code-img" alt="Scanning QR Code">
+                        </div>
+                        
+                        <div class="qr-status">
+                            <div class="refresh-bar">
+                                <div class="refresh-fill" id="qr-progress"></div>
+                            </div>
+                            <span class="timer-text" id="qr-timer-lbl">Refreshing in 10s...</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+                        Access the Student Portal at this URL:<br>
+                        <a href="" id="student-portal-friendly-link" target="_blank" style="color: var(--secondary); text-decoration: underline;">--</a>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Side: Live Logs & Records -->
+            <div class="right-column">
+                
+                <!-- Live Attendee Spotlight Card -->
+                <div class="panel-card" id="spotlight-card" style="display: none; text-align: center; border-color: var(--secondary); background: radial-gradient(circle at top, rgba(6, 182, 212, 0.08) 0%, var(--bg-card) 100%);">
+                    <h2 class="panel-title" style="justify-content: center; color: var(--secondary); margin-bottom: 1rem;">
+                        🔔 Recent Check-in Verified
+                    </h2>
+                    <div style="margin: 0.5rem auto 1.25rem auto; width: 130px; height: 130px; border-radius: 50%; overflow: hidden; border: 3px solid var(--secondary); box-shadow: 0 0 20px var(--secondary-glow);">
+                        <img src="" id="spotlight-img" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <h3 id="spotlight-name" style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem;">--</h3>
+                    <p id="spotlight-roll" style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 0.75rem; font-weight: 600;">--</p>
+                    <div class="location-pill" style="font-size: 0.8rem; background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2); color: #34d399;">
+                        Verified inside: <span id="spotlight-dist" style="font-weight: bold;">--</span>m
+                    </div>
+                </div>
+
+                <!-- Live Attendance Log -->
+                <div class="panel-card">
+                    <h2 class="panel-title">
+                        Live Attendance Feed
+                        <span class="location-pill" style="font-size: 0.8rem;">
+                            Attendees: <strong id="attendee-count">0</strong>
+                        </span>
+                    </h2>
+                    
+                    <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Photo</th>
+                                    <th>Roll No</th>
+                                    <th>Student Name</th>
+                                    <th>Distance</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendance-tbody">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                                        No attendance records marked yet.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                        <button type="button" class="btn btn-outline" id="btn-export-csv" style="flex: 1;">
+                            📥 Export Records (CSV)
+                        </button>
+                        <button type="button" class="btn btn-outline" id="btn-clear-records" style="border-color: var(--accent-red); color: var(--accent-red);">
+                            🗑️ Clear
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Smart Attendance Management System. All rights reserved.</p>
+    </footer>
+
+    <script src="js/faculty.js"></script>
+</body>
+</html>

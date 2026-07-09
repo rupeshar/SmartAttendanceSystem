@@ -1,0 +1,14 @@
+# Dependency directories
+node_modules/
+
+# Local databases and user uploads
+db.json
+public/uploads/*
+!public/uploads/.gitkeep
+
+# System and logs files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db

@@ -48,7 +48,8 @@ class JSONDatabase {
         this.data = {
             session: null,
             records: [],
-            facultyUsers: []
+            facultyUsers: [],
+            studentUsers: []
         };
         this.load();
     }
@@ -59,6 +60,9 @@ class JSONDatabase {
                 this.data = JSON.parse(fs.readFileSync(this.filePath, 'utf8'));
                 if (!this.data.facultyUsers) {
                     this.data.facultyUsers = [];
+                }
+                if (!this.data.studentUsers) {
+                    this.data.studentUsers = [];
                 }
             } else {
                 this.save();
@@ -124,14 +128,49 @@ class JSONDatabase {
         if (exists) {
             throw new Error('Faculty username already exists.');
         }
-        this.data.facultyUsers.push({ username, password });
+        // Newly registered faculty accounts are pending approval
+        this.data.facultyUsers.push({ username, password, approved: false });
         this.save();
     }
 
     loginFaculty(username, password) {
-        return this.data.facultyUsers.some(
+        return this.data.facultyUsers.find(
             u => u.username.toLowerCase() === username.toLowerCase() && u.password === password
         );
+    }
+
+    registerStudent(rollNumber, name) {
+        const cleanRoll = rollNumber.trim().toUpperCase();
+        const exists = this.data.studentUsers.some(s => s.rollNumber === cleanRoll);
+        if (exists) {
+            throw new Error('Student roll number already registered.');
+        }
+        // Newly registered students are pending approval
+        this.data.studentUsers.push({ rollNumber: cleanRoll, name: name.trim(), approved: false });
+        this.save();
+    }
+
+    isStudentApproved(rollNumber) {
+        const cleanRoll = rollNumber.trim().toUpperCase();
+        const student = this.data.studentUsers.find(s => s.rollNumber === cleanRoll);
+        return student ? student.approved === true : false;
+    }
+
+    approveUser(type, id, action) {
+        const approved = (action === 'approve');
+        if (type === 'faculty') {
+            const user = this.data.facultyUsers.find(u => u.username.toLowerCase() === id.toLowerCase());
+            if (!user) throw new Error('Faculty user not found.');
+            user.approved = approved;
+        } else if (type === 'student') {
+            const cleanRoll = id.trim().toUpperCase();
+            const student = this.data.studentUsers.find(s => s.rollNumber === cleanRoll);
+            if (!student) throw new Error('Student not found.');
+            student.approved = approved;
+        } else {
+            throw new Error('Invalid user type.');
+        }
+        this.save();
     }
 }
 
@@ -200,11 +239,84 @@ app.post('/api/faculty/login', (req, res) => {
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password are required.' });
     }
-    const success = db.loginFaculty(username.trim(), password);
-    if (success) {
-        res.json({ success: true, message: 'Login successful!' });
+    const user = db.loginFaculty(username.trim(), password);
+    if (user) {
+        if (!user.approved) {
+            return res.status(403).json({ error: 'Access Denied: Your account is pending admin approval.' });
+        }
+        res.json({ success: true, message: 'Login successful!', username: user.username });
     } else {
         res.status(400).json({ error: 'Invalid username or password.' });
+    }
+});
+
+// Student Registration
+app.post('/api/student/register', (req, res) => {
+    const { rollNumber, name } = req.body;
+    if (!rollNumber || !name) {
+        return res.status(400).json({ error: 'Roll number and student name are required.' });
+    }
+    if (rollNumber.trim().length < 2 || name.trim().length < 2) {
+        return res.status(400).json({ error: 'Please enter a valid roll number and name.' });
+    }
+    try {
+        db.registerStudent(rollNumber, name);
+        res.json({ success: true, message: 'Registration submitted! Please wait for Admin approval.' });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Admin Login
+app.post('/api/admin/login', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password are required.' });
+    }
+    if (username.trim() === 'admin' && password === 'SYS') {
+        res.json({ success: true, message: 'Admin logged in successfully!' });
+    } else {
+        res.status(401).json({ error: 'Access Denied: Invalid Admin credentials.' });
+    }
+});
+
+// Get Pending Registrations & All Users
+app.get('/api/admin/pending', (req, res) => {
+    const pendingFaculty = db.data.facultyUsers.filter(u => !u.approved);
+    const pendingStudents = db.data.studentUsers.filter(s => !s.approved);
+    const approvedFaculty = db.data.facultyUsers.filter(u => u.approved);
+    const approvedStudents = db.data.studentUsers.filter(s => s.approved);
+    res.json({
+        pendingFaculty,
+        pendingStudents,
+        approvedFaculty,
+        approvedStudents
+    });
+});
+
+// Approve or Reject Users
+app.post('/api/admin/approve', (req, res) => {
+    const { type, id, action } = req.body; // action: 'approve' or 'reject'
+    if (!type || !id || !action) {
+        return res.status(400).json({ error: 'Missing type, id, or action parameter.' });
+    }
+    try {
+        if (action === 'approve') {
+            db.approveUser(type, id, 'approve');
+            res.json({ success: true, message: `${type} user approved successfully.` });
+        } else if (action === 'reject') {
+            if (type === 'faculty') {
+                db.data.facultyUsers = db.data.facultyUsers.filter(u => u.username.toLowerCase() !== id.toLowerCase());
+            } else if (type === 'student') {
+                db.data.studentUsers = db.data.studentUsers.filter(s => s.rollNumber.toLowerCase() !== id.toLowerCase());
+            }
+            db.save();
+            res.json({ success: true, message: `${type} registration rejected and removed.` });
+        } else {
+            return res.status(400).json({ error: 'Invalid action.' });
+        }
+    } catch (err) {
+        res.status(400).json({ error: err.message });
     }
 });
 
@@ -294,6 +406,11 @@ app.post('/api/attendance/submit', (req, res) => {
 
     if (!sessionId || !token || !studentName || !rollNumber || latitude === undefined || longitude === undefined) {
         return res.status(400).json({ error: 'Missing Session ID, token, student details, or geolocation.' });
+    }
+
+    // Verify if student is registered and approved
+    if (!db.isStudentApproved(rollNumber)) {
+        return res.status(403).json({ error: 'Access Denied: Your student roll number is not registered or is pending admin approval.' });
     }
 
     // 0. Verify Session ID matches active session

@@ -116,10 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button class="btn-sm btn-reject" data-id="${s.rollNumber}" data-type="student" data-action="reject">Revoke</button>
             `;
 
+            const photoHtml = s.passportPhotoUrl 
+                ? `<a href="${escapeHtml(s.passportPhotoUrl)}" target="_blank" style="display: inline-block; width: 34px; height: 34px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); vertical-align: middle; margin-right: 0.5rem;"><img src="${escapeHtml(s.passportPhotoUrl)}" style="width: 100%; height: 100%; object-fit: cover;"></a>`
+                : `<span style="color: var(--text-muted); font-size: 0.75rem; margin-right: 0.5rem;">No Photo</span>`;
+
             return `
                 <tr>
                     <td><strong>${escapeHtml(s.rollNumber)}</strong></td>
-                    <td>${escapeHtml(s.name)}</td>
+                    <td>${photoHtml} <span style="vertical-align: middle;">${escapeHtml(s.name)}</span></td>
                     <td>${actionButtons}</td>
                 </tr>
             `;

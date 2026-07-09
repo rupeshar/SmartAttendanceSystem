@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -23,6 +24,10 @@ const DB_FILE = path.join(__dirname, 'db.json');
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+const PASSPORT_DIR = path.join(__dirname, 'public', 'uploads', 'passport');
+if (!fs.existsSync(PASSPORT_DIR)) {
+    fs.mkdirSync(PASSPORT_DIR, { recursive: true });
 }
 
 // Nodemailer Transporter Setup
@@ -226,7 +231,7 @@ class JSONDatabase {
         );
     }
 
-    registerStudent(rollNumber, name, email) {
+    registerStudent(rollNumber, name, email, photoPath) {
         const cleanRoll = rollNumber.trim().toUpperCase();
         const exists = this.data.studentUsers.some(s => s.rollNumber === cleanRoll);
         if (exists) {
@@ -237,6 +242,7 @@ class JSONDatabase {
             rollNumber: cleanRoll, 
             name: name.trim(), 
             email: email.trim().toLowerCase(), 
+            passportPhotoUrl: photoPath, 
             approved: false 
         });
         this.save();
@@ -351,15 +357,37 @@ app.post('/api/faculty/login', (req, res) => {
 
 // Student Registration
 app.post('/api/student/register', (req, res) => {
-    const { rollNumber, name, email } = req.body;
-    if (!rollNumber || !name || !email) {
-        return res.status(400).json({ error: 'Roll number, student name, and email are required.' });
+    const { rollNumber, name, email, passportImage } = req.body;
+    if (!rollNumber || !name || !email || !passportImage) {
+        return res.status(400).json({ error: 'Roll number, student name, email, and passport photo are required.' });
     }
     if (rollNumber.trim().length < 2 || name.trim().length < 2 || !email.includes('@')) {
         return res.status(400).json({ error: 'Please enter a valid roll number, name, and email address.' });
     }
+    
+    // Save passport image file
+    let photoPath = '';
+    if (passportImage.startsWith('data:image/')) {
+        try {
+            const matches = passportImage.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+            if (matches && matches.length === 3) {
+                const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+                const buffer = Buffer.from(matches[2], 'base64');
+                const fileName = `passport-${rollNumber.trim().replace(/[^a-zA-Z0-9]/g, '_')}.${ext}`;
+                const filePath = path.join(PASSPORT_DIR, fileName);
+                fs.writeFileSync(filePath, buffer);
+                photoPath = `/uploads/passport/${fileName}`;
+            }
+        } catch (err) {
+            console.error('Failed to save student passport photo:', err);
+            return res.status(500).json({ error: 'Failed to process and save passport photo.' });
+        }
+    } else {
+        return res.status(400).json({ error: 'Invalid passport photo format.' });
+    }
+
     try {
-        db.registerStudent(rollNumber, name, email);
+        db.registerStudent(rollNumber, name, email, photoPath);
         res.json({ success: true, message: 'Registration submitted! Please wait for Admin approval.' });
     } catch (err) {
         res.status(400).json({ error: err.message });
@@ -377,7 +405,14 @@ app.get('/api/student/status', (req, res) => {
     if (!student) {
         return res.json({ registered: false, approved: false, status: 'not_found' });
     }
-    res.json({ registered: true, approved: student.approved, name: student.name, email: student.email || '', status: student.approved ? 'approved' : 'pending' });
+    res.json({ 
+        registered: true, 
+        approved: student.approved, 
+        name: student.name, 
+        email: student.email || '', 
+        passportPhotoUrl: student.passportPhotoUrl || '',
+        status: student.approved ? 'approved' : 'pending' 
+    });
 });
 
 // Admin Login

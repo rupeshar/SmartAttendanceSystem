@@ -4,6 +4,9 @@ let html5QrcodeScanner = null;
 let activeQrToken = null; // Stored verification token from scanned QR code
 let selfieStream = null; // Camera stream for face selfie
 let capturedSelfieBase64 = null; // Stored snapshot photo base64
+let registeredPassportPhotoUrl = '';
+let faceApiInitialized = false;
+let faceMatchVerified = false;
 
 // Map variables
 let studentMap = null;
@@ -25,6 +28,7 @@ const btnStudentLogout = document.getElementById('btn-student-logout');
 const studentName = document.getElementById('student-name');
 const studentRoll = document.getElementById('student-roll');
 const studentEmail = document.getElementById('student-email');
+const studentPhoto = document.getElementById('student-photo');
 const btnRegisterStudent = document.getElementById('btn-register-student');
 const btnVerifyStatus = document.getElementById('btn-verify-status');
 
@@ -84,6 +88,14 @@ async function loadProfile() {
     const savedName = localStorage.getItem('attendance_student_name');
     const savedRoll = localStorage.getItem('attendance_student_roll');
     const savedEmail = localStorage.getItem('attendance_student_email');
+    const savedPassport = localStorage.getItem('attendance_student_passport');
+    
+    if (savedPassport) {
+        registeredPassportPhotoUrl = savedPassport;
+    }
+    
+    // Warm up Face API models in the background
+    initFaceApi();
     
     if (savedRoll) {
         studentRoll.value = savedRoll;
@@ -139,6 +151,11 @@ async function checkStatus(rollNumber) {
                     localStorage.setItem('attendance_student_email', data.email);
                     profileDisplayEmail.textContent = data.email;
                 }
+                if (data.passportPhotoUrl) {
+                    registeredPassportPhotoUrl = data.passportPhotoUrl;
+                    localStorage.setItem('attendance_student_passport', data.passportPhotoUrl);
+                    profileDisplayEmail.textContent = `${data.email} | Photo Registered`;
+                }
                 localStorage.setItem('attendance_student_roll', rollNumber);
                 profileDisplayRoll.textContent = rollNumber;
                 
@@ -180,10 +197,15 @@ function logoutStudent() {
     localStorage.removeItem('attendance_student_roll');
     localStorage.removeItem('attendance_student_name');
     localStorage.removeItem('attendance_student_email');
+    localStorage.removeItem('attendance_student_passport');
     
     studentRoll.value = '';
     studentName.value = '';
     studentEmail.value = '';
+    if (studentPhoto) studentPhoto.value = '';
+    
+    registeredPassportPhotoUrl = '';
+    faceMatchVerified = false;
     
     studentFormFields.style.display = 'block';
     studentProfileView.style.display = 'none';
@@ -195,48 +217,165 @@ function logoutStudent() {
     showAlert('Signed out successfully. Please register or log in.', 'info');
 }
 
+// Load face-api models asynchronously at start
+async function initFaceApi() {
+    if (faceApiInitialized) return;
+    try {
+        console.log('Loading FaceAPI models...');
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+        await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+        faceApiInitialized = true;
+        console.log('FaceAPI initialized successfully!');
+    } catch (err) {
+        console.error('FaceAPI loading failed:', err);
+    }
+}
+
+// Compare student selfie with passport registry
+async function verifyFaceIdentity() {
+    if (!registeredPassportPhotoUrl) {
+        showAlert('No registered passport photo found. Attendance cannot be verified without face matching.', 'error');
+        faceIndicator.className = 'status-indicator status-inactive';
+        faceStatusText.textContent = 'Verification Failed';
+        return;
+    }
+    
+    faceIndicator.className = 'status-indicator status-inactive';
+    faceStatusText.textContent = 'Loading models...';
+    
+    if (!faceApiInitialized) {
+        await initFaceApi();
+    }
+    
+    if (!faceApiInitialized) {
+        showAlert('Failed to initialize face matching engine. Please verify internet connection.', 'error');
+        faceStatusText.textContent = 'Models failed';
+        return;
+    }
+    
+    faceStatusText.textContent = 'Comparing faces...';
+    try {
+        const passportImg = new Image();
+        passportImg.src = registeredPassportPhotoUrl;
+        passportImg.crossOrigin = 'anonymous';
+        
+        const selfieImg = new Image();
+        selfieImg.src = capturedSelfieBase64;
+        
+        await Promise.all([
+            new Promise((resolve, reject) => { passportImg.onload = resolve; passportImg.onerror = () => reject(new Error('Failed to load registered passport photo.')); }),
+            new Promise((resolve, reject) => { selfieImg.onload = resolve; selfieImg.onerror = () => reject(new Error('Failed to load captured selfie snapshot.')); })
+        ]);
+        
+        const passportDetection = await faceapi.detectSingleFace(passportImg)
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+            
+        if (!passportDetection) {
+            showAlert('Could not detect a face in your registered passport photo. Please check with your administrator.', 'error');
+            faceStatusText.textContent = 'Passport face error';
+            return;
+        }
+        
+        const selfieDetection = await faceapi.detectSingleFace(selfieImg)
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+            
+        if (!selfieDetection) {
+            showAlert('No face detected in your captured selfie. Please align your face clearly in center and try again.', 'error');
+            faceStatusText.textContent = 'No face detected';
+            return;
+        }
+        
+        const distance = faceapi.euclideanDistance(passportDetection.descriptor, selfieDetection.descriptor);
+        console.log('Face Euclidean distance match score:', distance);
+        
+        const matchPercentage = Math.round((1 - distance) * 100);
+        
+        // Threshold: distance < 0.6 is a match
+        if (distance < 0.6) {
+            faceMatchVerified = true;
+            faceIndicator.className = 'status-indicator status-active';
+            faceStatusText.textContent = `Verified (${matchPercentage}% Match)`;
+            showAlert(`Face Verified! ${matchPercentage}% match with registered photo. You may scan classroom QR code.`, 'success');
+        } else {
+            faceMatchVerified = false;
+            faceIndicator.className = 'status-indicator status-inactive';
+            faceStatusText.textContent = `Mismatch (${matchPercentage}% Match)`;
+            showAlert(`Face Mismatch (${matchPercentage}% match). Your face does not match the registered passport photo. Please capture again clearly.`, 'error');
+            capturedSelfieBase64 = null; // reset selfie snapshot
+            selfiePreviewImg.style.display = 'none';
+            selfieVideo.style.display = 'block';
+            btnToggleSelfie.textContent = '🎥 Start Selfie Camera';
+        }
+    } catch (err) {
+        console.error('Face verification process failed:', err);
+        showAlert(`Face verification failed: ${err.message}`, 'error');
+        faceStatusText.textContent = 'Verification Error';
+    }
+}
+
 // Register student account
 async function registerStudent() {
     const roll = studentRoll.value.trim();
     const name = studentName.value.trim();
     const email = studentEmail.value.trim();
+    const photoFile = studentPhoto.files[0];
     
     if (!roll || !name || !email) {
         showAlert('Please enter Roll Number, Full Name, and Email to register.', 'error');
         return;
     }
     
+    if (!photoFile) {
+        showAlert('Please upload a passport-size photo for face verification.', 'error');
+        return;
+    }
+    
     const statusMsg = document.getElementById('registration-status-msg');
     statusMsg.style.display = 'block';
-    statusMsg.textContent = 'Submitting registration...';
+    statusMsg.textContent = 'Processing passport photo...';
     statusMsg.style.background = 'rgba(0,0,0,0.05)';
     statusMsg.style.color = 'var(--text-muted)';
     
-    try {
-        const response = await fetch('/api/student/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rollNumber: roll, name, email })
-        });
+    const reader = new FileReader();
+    reader.readAsDataURL(photoFile);
+    reader.onerror = () => {
+        showAlert('Failed to read passport photo file.', 'error');
+    };
+    reader.onload = async function() {
+        const passportImage = reader.result;
+        statusMsg.textContent = 'Submitting registration...';
         
-        const data = await response.json();
-        if (response.ok) {
-            localStorage.setItem('attendance_student_roll', roll);
-            localStorage.setItem('attendance_student_name', name);
-            localStorage.setItem('attendance_student_email', email);
-            showAlert('Registration request submitted!', 'success');
-            await checkStatus(roll);
-        } else {
-            showAlert(data.error || 'Registration failed.', 'error');
-            statusMsg.textContent = `❌ ${data.error || 'Registration failed.'}`;
-            statusMsg.style.background = 'rgba(239, 68, 68, 0.1)';
-            statusMsg.style.color = '#ef4444';
-            statusMsg.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+        try {
+            const response = await fetch('/api/student/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rollNumber: roll, name, email, passportImage })
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+                localStorage.setItem('attendance_student_roll', roll);
+                localStorage.setItem('attendance_student_name', name);
+                localStorage.setItem('attendance_student_email', email);
+                showAlert('Registration request submitted!', 'success');
+                await checkStatus(roll);
+            } else {
+                showAlert(data.error || 'Registration failed.', 'error');
+                statusMsg.textContent = `❌ ${data.error || 'Registration failed.'}`;
+                statusMsg.style.background = 'rgba(239, 68, 68, 0.1)';
+                statusMsg.style.color = '#ef4444';
+                statusMsg.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+            }
+        } catch (err) {
+            console.error('Register error:', err);
+            showAlert('Network error submitting registration.', 'error');
+            statusMsg.textContent = '❌ Network error submitting registration.';
         }
-    } catch (err) {
-        console.error('Register error:', err);
-        showAlert('Network error submitting registration.', 'error');
-    }
+    };
 }
 
 // Verify student status button click
@@ -507,7 +646,8 @@ function takeSelfieSnapshot() {
 
         faceIndicator.className = 'status-indicator status-active';
         faceStatusText.textContent = 'Selfie Captured';
-        showAlert('Selfie snapshot captured successfully! Ready to scan QR code.', 'success');
+        showAlert('Selfie captured! Initiating face verification matching...', 'info');
+        verifyFaceIdentity();
     }
 }
 
@@ -573,8 +713,13 @@ async function submitAttendance() {
         return;
     }
 
-    // Fallback to mock placard if webcam failed or snapshot wasn't taken
-    const selfieData = capturedSelfieBase64 || generatePlacard();
+    // Verify face comparison matched successfully
+    if (!faceMatchVerified) {
+        showAlert('Face verification failed or not completed. Please capture a selfie that matches your registered passport photo.', 'error');
+        return;
+    }
+
+    const selfieData = capturedSelfieBase64;
 
     // Dev Simulation Mode: fetch the current active token from server
     let tokenToUse = activeQrToken;
@@ -624,6 +769,7 @@ async function submitAttendance() {
             
             // Reset verification photo state after success
             capturedSelfieBase64 = null;
+            faceMatchVerified = false;
             selfiePreviewImg.style.display = 'none';
             selfieVideo.style.display = 'block';
             btnToggleSelfie.textContent = '🎥 Start Selfie Camera';

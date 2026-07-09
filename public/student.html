@@ -10,6 +10,8 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- HTML5 QR Code Scanner Library from CDN -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Face API JS Library from JSDelivr CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 </head>
 <body>
     <header>
@@ -59,6 +61,10 @@
                 <div class="form-group">
                     <label for="student-email">Email Address</label>
                     <input type="email" id="student-email" class="input-field" placeholder="e.g. rupesh@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="student-photo">Upload Passport Photo (Face Matching)</label>
+                    <input type="file" id="student-photo" class="input-field" accept="image/*" style="padding-top: 0.5rem;">
                 </div>
                 <div style="display: flex; gap: 0.75rem;">
                     <button type="button" class="btn btn-secondary" id="btn-register-student" style="flex: 1; padding: 0.8rem 1rem;">

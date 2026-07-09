@@ -663,3 +663,93 @@ footer {
 .pulse-glow {
     animation: pulse 2s infinite ease-in-out;
 }
+
+/* ==========================================================================
+   Claymorphism Theme (For Admin Portal)
+   ========================================================================== */
+.clay-theme .panel-card,
+.clay-theme .auth-card {
+    background: #f1f5f9; /* clay soft background */
+    border: none;
+    border-radius: 28px;
+    box-shadow: 
+        12px 12px 24px rgba(167, 180, 211, 0.45), 
+        -12px -12px 24px rgba(255, 255, 255, 0.95),
+        inset -6px -6px 12px rgba(167, 180, 211, 0.2), 
+        inset 6px 6px 12px rgba(255, 255, 255, 0.6);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.clay-theme .panel-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 
+        16px 16px 32px rgba(167, 180, 211, 0.5), 
+        -16px -16px 32px rgba(255, 255, 255, 0.95),
+        inset -6px -6px 12px rgba(167, 180, 211, 0.2), 
+        inset 6px 6px 12px rgba(255, 255, 255, 0.6);
+}
+
+/* Clay Inputs */
+.clay-theme .input-field {
+    background: #e2e8f0;
+    border: none !important;
+    border-radius: 18px;
+    box-shadow: 
+        inset 3px 3px 6px rgba(167, 180, 211, 0.5), 
+        inset -3px -3px 6px rgba(255, 255, 255, 0.8);
+    transition: all 0.3s ease;
+    color: var(--text-main);
+    padding: 0.9rem 1.2rem;
+}
+
+.clay-theme .input-field:focus {
+    background: #cbd5e1;
+    box-shadow: 
+        inset 4px 4px 8px rgba(167, 180, 211, 0.6), 
+        inset -4px -4px 8px rgba(255, 255, 255, 0.9);
+    outline: none;
+}
+
+/* Clay Buttons */
+.clay-theme .btn {
+    border-radius: 20px;
+    border: none !important;
+    box-shadow: 
+        4px 4px 10px rgba(167, 180, 211, 0.35), 
+        inset -4px -4px 8px rgba(0, 0, 0, 0.12), 
+        inset 4px 4px 8px rgba(255, 255, 255, 0.45);
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-weight: 700;
+}
+
+.clay-theme .btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 
+        6px 6px 14px rgba(167, 180, 211, 0.45), 
+        inset -4px -4px 8px rgba(0, 0, 0, 0.12), 
+        inset 4px 4px 8px rgba(255, 255, 255, 0.45);
+}
+
+.clay-theme .btn:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 
+        2px 2px 6px rgba(167, 180, 211, 0.45), 
+        inset 3px 3px 6px rgba(0, 0, 0, 0.12), 
+        inset -3px -3px 6px rgba(255, 255, 255, 0.45);
+}
+
+.clay-theme .btn-outline {
+    background: #e2e8f0;
+    color: var(--text-main);
+}
+
+.clay-theme .btn-outline:hover {
+    background: #cbd5e1;
+}
+
+/* Specific button styles for Approve/Reject actions in tables */
+.clay-theme table .btn {
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+    border-radius: 12px;
+}

@@ -176,6 +176,7 @@ class JSONDatabase {
     clearAllUsers() {
         this.data.facultyUsers = [];
         this.data.studentUsers = [];
+        this.data.attendanceRecords = [];
         this.save();
     }
 }

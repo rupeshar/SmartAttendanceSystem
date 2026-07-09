@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const approvedFacultyTable = document.getElementById('approved-faculty-table');
     const approvedStudentTable = document.getElementById('approved-student-table');
 
+    const attendanceRecordsTable = document.getElementById('attendance-records-table');
+
     // Fetch and populate directory
     async function loadDirectory() {
         try {
@@ -25,9 +27,48 @@ document.addEventListener('DOMContentLoaded', () => {
             renderStudentTable(data.pendingStudents, pendingStudentTable, true);
             renderFacultyTable(data.approvedFaculty, approvedFacultyTable, false);
             renderStudentTable(data.approvedStudents, approvedStudentTable, false);
+            
+            await loadAttendanceRecords();
         } catch (err) {
             console.error('Error fetching admin directory:', err);
         }
+    }
+
+    async function loadAttendanceRecords() {
+        if (!attendanceRecordsTable) return;
+        try {
+            const response = await fetch('/api/attendance/records');
+            if (!response.ok) throw new Error('Failed to fetch attendance logs.');
+            const data = await response.json();
+            renderAttendanceRecords(data.records || []);
+        } catch (err) {
+            console.error('Error fetching attendance logs:', err);
+        }
+    }
+
+    function renderAttendanceRecords(records) {
+        if (records.length === 0) {
+            attendanceRecordsTable.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No attendance records marked yet.</td></tr>`;
+            return;
+        }
+
+        attendanceRecordsTable.innerHTML = records.map(record => {
+            const dateStr = new Date(record.timestamp).toLocaleString();
+            const photoHtml = record.studentImage 
+                ? `<a href="${escapeHtml(record.studentImage)}" target="_blank" class="avatar-link" style="display: inline-block; width: 44px; height: 44px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color);"><img src="${escapeHtml(record.studentImage)}" style="width: 100%; height: 100%; object-fit: cover;"></a>`
+                : `<span style="color: var(--text-muted); font-size: 0.8rem;">No Photo</span>`;
+            
+            return `
+                <tr>
+                    <td>${photoHtml}</td>
+                    <td><code style="background: rgba(0,0,0,0.03); padding: 0.2rem 0.4rem; border-radius: 4px; font-weight: 600;">${escapeHtml(record.rollNumber)}</code></td>
+                    <td style="font-weight: 600;">${escapeHtml(record.studentName)}</td>
+                    <td><span style="font-size: 0.85rem; color: var(--text-muted);">${record.distanceFromCenter}m</span></td>
+                    <td style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(dateStr)}</td>
+                    <td><span class="status-indicator-pill" style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">Present</span></td>
+                </tr>
+            `;
+        }).join('');
     }
 
     // Render Faculty Lists

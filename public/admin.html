@@ -103,7 +103,7 @@
         </div>
     </header>
 
-    <main class="admin-dashboard-container">
+    <main class="admin-dashboard-container clay-theme">
         <!-- Dashboard Title Row -->
         <div class="admin-title-row">
             <div>
@@ -219,6 +219,33 @@
                     </div>
                 </div>
 
+            </div>
+        </section>
+
+        <!-- SECTION 3: ATTENDANCE RECORDS DIRECTORY -->
+        <section class="admin-section" style="margin-top: 2.5rem;">
+            <h2>Marked Attendance Directory</h2>
+            <div class="panel-card" style="margin-bottom: 2rem;">
+                <h3 class="panel-title">📸 Real-Time Check-In Logs</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Photo</th>
+                                <th>Roll Number</th>
+                                <th>Student Name</th>
+                                <th>Distance</th>
+                                <th>Timestamp</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-records-table">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No attendance records marked yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </section>
 

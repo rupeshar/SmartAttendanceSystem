@@ -37,13 +37,13 @@
         </div>
     </header>
 
-    <main class="bento-grid">
+    <main style="max-width: 700px;">
         
         <!-- Response Alerts -->
-        <div id="alert-box" style="display: none; grid-column: span 3;"></div>
+        <div id="alert-box" style="display: none;"></div>
 
         <!-- Step 1: Student Registration & Status -->
-        <div class="panel-card bento-full" id="student-info-panel">
+        <div class="panel-card" id="student-info-panel">
             <h2 class="panel-title">1. Student Registration & Status</h2>
             
             <!-- Registration Inputs View -->
@@ -88,7 +88,7 @@
         </div>
 
         <!-- Step 2: Location Verification -->
-        <div class="panel-card bento-tall" id="location-panel" style="display: none;">
+        <div class="panel-card" id="location-panel" style="display: none;">
             <h2 class="panel-title">
                 2. Geolocation Tracking
                 <span class="location-pill">
@@ -184,51 +184,6 @@
         <p>&copy; 2026 Smart Attendance Management System. All rights reserved.</p>
     </footer>
 
-    <!-- Shifting Aurora Backdrop -->
-    <div class="aurora-glow-pink"></div>
-
-    <!-- GSAP Script & Micro-interactions -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            // Entrance animations for Bento Grid Panels
-            gsap.from(".logo", { duration: 1, y: -20, opacity: 0, ease: "power3.out" });
-            gsap.from("nav a", { duration: 1, y: -20, opacity: 0, stagger: 0.1, ease: "power3.out", delay: 0.1 });
-            gsap.from(".panel-card", { 
-                duration: 1.2, 
-                y: 60, 
-                opacity: 0, 
-                stagger: 0.15, 
-                ease: "power4.out", 
-                delay: 0.25 
-            });
-
-            // Magnetic Buttons Micro-interaction
-            const buttons = document.querySelectorAll('.btn');
-            buttons.forEach(btn => {
-                btn.addEventListener('mousemove', (e) => {
-                    const rect = btn.getBoundingClientRect();
-                    const x = e.clientX - rect.left - rect.width / 2;
-                    const y = e.clientY - rect.top - rect.height / 2;
-                    
-                    gsap.to(btn, {
-                        x: x * 0.35,
-                        y: y * 0.35,
-                        duration: 0.3,
-                        ease: "power2.out"
-                    });
-                });
-                btn.addEventListener('mouseleave', () => {
-                    gsap.to(btn, {
-                        x: 0,
-                        y: 0,
-                        duration: 0.5,
-                        ease: "elastic.out(1, 0.3)"
-                    });
-                });
-            });
-        });
-    </script>
     <script src="js/student.js?v=2.0"></script>
 </body>
 </html>

@@ -273,6 +273,20 @@ app.post('/api/student/register', (req, res) => {
     }
 });
 
+// Check Student Status
+app.get('/api/student/status', (req, res) => {
+    const { rollNumber } = req.query;
+    if (!rollNumber) {
+        return res.status(400).json({ error: 'Roll number is required.' });
+    }
+    const cleanRoll = rollNumber.trim().toUpperCase();
+    const student = db.data.studentUsers.find(s => s.rollNumber === cleanRoll);
+    if (!student) {
+        return res.json({ registered: false, approved: false, status: 'not_found' });
+    }
+    res.json({ registered: true, approved: student.approved, name: student.name, status: student.approved ? 'approved' : 'pending' });
+});
+
 // Admin Login
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;

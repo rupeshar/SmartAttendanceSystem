@@ -34,23 +34,26 @@
         <!-- Response Alerts -->
         <div id="alert-box" style="display: none;"></div>
 
-        <!-- Step 1: Student Information -->
+        <!-- Step 1: Student Information & Registration -->
         <div class="panel-card" id="student-info-panel">
-            <h2 class="panel-title">1. Student Details</h2>
-            <div class="form-group">
-                <label for="student-name">Full Name</label>
-                <input type="text" id="student-name" class="input-field" placeholder="e.g. John Doe">
-            </div>
+            <h2 class="panel-title">1. Student Registration & Status</h2>
             <div class="form-group">
                 <label for="student-roll">Roll Number / ID</label>
-                <input type="text" id="student-roll" class="input-field" placeholder="e.g. CS2026045">
+                <input type="text" id="student-roll" class="input-field" placeholder="e.g. 101">
             </div>
-            <button type="button" class="btn btn-primary" id="btn-save-profile" style="width: 100%;">
-                💾 Save Profile
-            </button>
-            <p style="text-align: center; margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">
-                Not registered yet? <a href="student-register.html" style="color: var(--primary); text-decoration: none; font-weight: 600;">Register your account here</a>
-            </p>
+            <div class="form-group">
+                <label for="student-name">Full Name</label>
+                <input type="text" id="student-name" class="input-field" placeholder="e.g. Rupesh Kumar">
+            </div>
+            <div style="display: flex; gap: 0.75rem;">
+                <button type="button" class="btn btn-secondary" id="btn-register-student" style="flex: 1; padding: 0.8rem 1rem;">
+                    📝 Register
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-verify-status" style="flex: 1; padding: 0.8rem 1rem;">
+                    🔍 Verify Status
+                </button>
+            </div>
+            <div id="registration-status-msg" style="display: none; margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; text-align: center;"></div>
         </div>
 
         <!-- Step 2: Location Verification -->
@@ -81,27 +84,6 @@
             <!-- Student Map visualization -->
             <div id="student-map" style="height: 180px; border-radius: 12px; margin-top: 1rem; border: 1px solid var(--border-color); display: none; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);"></div>
 
-            <!-- Testing GPS Coordinates Mock Box -->
-            <div class="mock-panel">
-                <h4>Local Testing GPS Mocking</h4>
-                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">
-                    Since browsers block geolocation on insecure networks or require permissions, mock your coordinates to test geofencing boundaries.
-                </p>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="mock-lat">Mock Latitude</label>
-                        <input type="number" step="any" id="mock-lat" class="input-field" placeholder="Lat">
-                    </div>
-                    <div class="form-group">
-                        <label for="mock-lng">Mock Longitude</label>
-                        <input type="number" step="any" id="mock-lng" class="input-field" placeholder="Lng">
-                    </div>
-                </div>
-                <div class="mock-btn-row">
-                    <button class="btn btn-outline btn-xs" id="btn-mock-apply">Apply Mock Coordinates</button>
-                    <button class="btn btn-outline btn-xs" id="btn-mock-clear">Clear Mock</button>
-                </div>
-            </div>
         </div>
 
         <!-- Step 3: Face Verification -->

@@ -1,6 +1,5 @@
 let studentLatitude = null;
 let studentLongitude = null;
-let isMockLocation = false;
 let html5QrcodeScanner = null;
 let activeQrToken = null; // Stored verification token from scanned QR code
 let selfieStream = null; // Camera stream for face selfie
@@ -18,7 +17,8 @@ const alertBox = document.getElementById('alert-box');
 const infoPanel = document.getElementById('student-info-panel');
 const studentName = document.getElementById('student-name');
 const studentRoll = document.getElementById('student-roll');
-const btnSaveProfile = document.getElementById('btn-save-profile');
+const btnRegisterStudent = document.getElementById('btn-register-student');
+const btnVerifyStatus = document.getElementById('btn-verify-status');
 
 const locationPanel = document.getElementById('location-panel');
 const gpsIndicator = document.getElementById('gps-indicator');
@@ -27,11 +27,6 @@ const btnGetStudentGps = document.getElementById('btn-get-student-gps');
 const coordsDisplay = document.getElementById('student-coords-display');
 const studentLat = document.getElementById('student-lat');
 const studentLng = document.getElementById('student-lng');
-
-const mockLat = document.getElementById('mock-lat');
-const mockLng = document.getElementById('mock-lng');
-const btnMockApply = document.getElementById('btn-mock-apply');
-const btnMockClear = document.getElementById('btn-mock-clear');
 
 // Face Verification UI
 const facePanel = document.getElementById('face-panel');
@@ -55,10 +50,9 @@ window.addEventListener('DOMContentLoaded', () => {
     initCameraFeatureCheck();
 
     // Event Wireup
-    btnSaveProfile.addEventListener('click', saveProfile);
+    if (btnRegisterStudent) btnRegisterStudent.addEventListener('click', registerStudent);
+    if (btnVerifyStatus) btnVerifyStatus.addEventListener('click', verifyStatus);
     btnGetStudentGps.addEventListener('click', authorizeGPS);
-    btnMockApply.addEventListener('click', applyMockCoordinates);
-    btnMockClear.addEventListener('click', clearMockCoordinates);
     btnToggleSelfie.addEventListener('click', toggleSelfieCamera);
     btnCaptureSelfie.addEventListener('click', takeSelfieSnapshot);
     btnToggleCamera.addEventListener('click', toggleCameraScanner);
@@ -76,47 +70,133 @@ function initCameraFeatureCheck() {
     }
 }
 
-// Load saved student details from localStorage
-function loadProfile() {
+// Load saved student details from localStorage and verify status
+async function loadProfile() {
     const savedName = localStorage.getItem('attendance_student_name');
     const savedRoll = localStorage.getItem('attendance_student_roll');
     
-    if (savedName && savedRoll) {
-        studentName.value = savedName;
+    if (savedRoll) {
         studentRoll.value = savedRoll;
+        if (savedName) studentName.value = savedName;
         
-        // Skip setup step
-        infoPanel.style.display = 'none';
-        locationPanel.style.display = 'block';
-        facePanel.style.display = 'block';
-        scanPanel.style.display = 'block';
-        
-        // Automatically request GPS coordinates
-        authorizeGPS();
+        await checkStatus(savedRoll);
+    } else {
+        hideSubsequentPanels();
     }
 }
 
-// Save profile to localStorage
-function saveProfile() {
-    const name = studentName.value.trim();
-    const roll = studentRoll.value.trim();
+// Hide panels if unapproved
+function hideSubsequentPanels() {
+    locationPanel.style.display = 'none';
+    facePanel.style.display = 'none';
+    scanPanel.style.display = 'none';
+}
 
-    if (!name || !roll) {
-        showAlert('Please fill in all profile fields.', 'error');
-        return;
-    }
-
-    localStorage.setItem('attendance_student_name', name);
-    localStorage.setItem('attendance_student_roll', roll);
-
-    showAlert('Profile saved successfully!', 'success');
-    infoPanel.style.display = 'none';
+// Show panels if approved
+function showSubsequentPanels() {
     locationPanel.style.display = 'block';
     facePanel.style.display = 'block';
     scanPanel.style.display = 'block';
+}
 
-    // Automatically request GPS coordinates
-    authorizeGPS();
+// Check student registration status
+async function checkStatus(rollNumber) {
+    const statusMsg = document.getElementById('registration-status-msg');
+    statusMsg.style.display = 'block';
+    statusMsg.textContent = 'Verifying registration status...';
+    statusMsg.style.background = 'rgba(0, 0, 0, 0.05)';
+    statusMsg.style.color = 'var(--text-muted)';
+    
+    try {
+        const response = await fetch(`/api/student/status?rollNumber=${encodeURIComponent(rollNumber)}`);
+        const data = await response.json();
+        
+        if (data.registered) {
+            if (data.approved) {
+                statusMsg.textContent = `✅ Account Verified & Approved! Proceeding to check-in.`;
+                statusMsg.style.background = 'rgba(16, 185, 129, 0.1)';
+                statusMsg.style.color = '#10b981';
+                statusMsg.style.border = '1px solid rgba(16, 185, 129, 0.2)';
+                
+                if (data.name) {
+                    studentName.value = data.name;
+                    localStorage.setItem('attendance_student_name', data.name);
+                }
+                localStorage.setItem('attendance_student_roll', rollNumber);
+                
+                showSubsequentPanels();
+                authorizeGPS();
+            } else {
+                statusMsg.textContent = `⏳ Registration pending Admin approval. Please check back shortly.`;
+                statusMsg.style.background = 'rgba(245, 158, 11, 0.1)';
+                statusMsg.style.color = '#d97706';
+                statusMsg.style.border = '1px solid rgba(245, 158, 11, 0.2)';
+                hideSubsequentPanels();
+            }
+        } else {
+            statusMsg.textContent = `❌ Roll number is not registered yet. Please enter your name and click Register.`;
+            statusMsg.style.background = 'rgba(239, 68, 68, 0.1)';
+            statusMsg.style.color = '#ef4444';
+            statusMsg.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+            hideSubsequentPanels();
+        }
+    } catch (err) {
+        console.error('Check status error:', err);
+        statusMsg.textContent = '⚠ Network error verifying status. Please try again.';
+        hideSubsequentPanels();
+    }
+}
+
+// Register student account
+async function registerStudent() {
+    const roll = studentRoll.value.trim();
+    const name = studentName.value.trim();
+    
+    if (!roll || !name) {
+        showAlert('Please enter both Roll Number and Full Name to register.', 'error');
+        return;
+    }
+    
+    const statusMsg = document.getElementById('registration-status-msg');
+    statusMsg.style.display = 'block';
+    statusMsg.textContent = 'Submitting registration...';
+    statusMsg.style.background = 'rgba(0,0,0,0.05)';
+    statusMsg.style.color = 'var(--text-muted)';
+    
+    try {
+        const response = await fetch('/api/student/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rollNumber: roll, name })
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+            localStorage.setItem('attendance_student_roll', roll);
+            localStorage.setItem('attendance_student_name', name);
+            showAlert('Registration request submitted!', 'success');
+            await checkStatus(roll);
+        } else {
+            showAlert(data.error || 'Registration failed.', 'error');
+            statusMsg.textContent = `❌ ${data.error || 'Registration failed.'}`;
+            statusMsg.style.background = 'rgba(239, 68, 68, 0.1)';
+            statusMsg.style.color = '#ef4444';
+            statusMsg.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+        }
+    } catch (err) {
+        console.error('Register error:', err);
+        showAlert('Network error submitting registration.', 'error');
+    }
+}
+
+// Verify student status button click
+async function verifyStatus() {
+    const roll = studentRoll.value.trim();
+    if (!roll) {
+        showAlert('Please enter your Roll Number to check registration status.', 'error');
+        return;
+    }
+    await checkStatus(roll);
 }
 
 // Parse URL for ?sessionId= and ?token=
@@ -270,58 +350,7 @@ async function updateStudentMap(studentLatVal, studentLngVal) {
     }
 }
 
-// Mock Location Apply
-function applyMockCoordinates() {
-    const lat = parseFloat(mockLat.value);
-    const lng = parseFloat(mockLng.value);
 
-    if (isNaN(lat) || isNaN(lng)) {
-        showAlert('Please enter valid coordinates to mock.', 'error');
-        return;
-    }
-
-    studentLatitude = lat;
-    studentLongitude = lng;
-    isMockLocation = true;
-    
-    gpsIndicator.className = 'status-indicator status-active';
-    gpsStatusText.textContent = 'GPS Mocked';
-    
-    updateLocationUI(lat, lng);
-    showAlert(`Mock coordinates applied: ${lat.toFixed(5)}, ${lng.toFixed(5)}`, 'info');
-    
-    // Automatically launch Selfie Camera if supported
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        startSelfieCamera();
-    }
-}
-
-// Clear Mock Coordinates
-function clearMockCoordinates() {
-    mockLat.value = '';
-    mockLng.value = '';
-    isMockLocation = false;
-    
-    studentLatitude = null;
-    studentLongitude = null;
-    
-    gpsIndicator.className = 'status-indicator status-inactive';
-    gpsStatusText.textContent = 'GPS Off';
-    
-    const studentMapDiv = document.getElementById('student-map');
-    studentMapDiv.style.display = 'none';
-    
-    if (studentMap) {
-        studentMap.remove();
-        studentMap = null;
-        classroomCircle = null;
-        selfMarker = null;
-        classCenterMarker = null;
-    }
-
-    coordsDisplay.style.display = 'none';
-    showAlert('Mock coordinates cleared. Authorize GPS to get real location.', 'info');
-}
 
 // Helper to wrap getUserMedia with a promise timeout
 function getUserMediaWithTimeout(constraints, timeoutMs = 3000) {

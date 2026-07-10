@@ -123,7 +123,6 @@ function updateNavigationVisibility() {
 
     const isAdmin = sessionStorage.getItem('admin_authenticated') === 'true';
     const isFaculty = sessionStorage.getItem('faculty_authenticated') === 'true';
-    const isStudent = !!localStorage.getItem('attendance_student_roll');
 
     if (navAdmin) navAdmin.style.display = 'none';
 
@@ -135,11 +134,8 @@ function updateNavigationVisibility() {
         if (navAdmin) navAdmin.style.display = 'none';
         if (navFaculty) navFaculty.style.display = 'inline-block';
         if (navStudent) navStudent.style.display = 'none';
-    } else if (isStudent) {
-        if (navAdmin) navAdmin.style.display = 'none';
-        if (navFaculty) navFaculty.style.display = 'none';
-        if (navStudent) navStudent.style.display = 'inline-block';
     } else {
+        // On faculty authentication portal, show both options, keep admin hidden
         if (navAdmin) navAdmin.style.display = 'none';
         if (navFaculty) navFaculty.style.display = 'inline-block';
         if (navStudent) navStudent.style.display = 'inline-block';

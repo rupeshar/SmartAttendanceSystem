@@ -416,6 +416,26 @@ app.get('/api/student/status', (req, res) => {
     });
 });
 
+// Secure gate for Admin dashboard page
+app.get('/admin.html', (req, res) => {
+    const cookies = req.headers.cookie || '';
+    if (cookies.includes('admin_auth=true')) {
+        res.sendFile(path.join(__dirname, 'secure', 'admin.html'));
+    } else {
+        res.redirect('/admin-auth.html');
+    }
+});
+
+// Admin Authentication Middleware
+function requireAdminAuth(req, res, next) {
+    const cookies = req.headers.cookie || '';
+    if (cookies.includes('admin_auth=true')) {
+        next();
+    } else {
+        res.status(403).json({ error: 'Access Denied: Unauthorized admin access.' });
+    }
+}
+
 // Admin Login
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
@@ -423,14 +443,22 @@ app.post('/api/admin/login', (req, res) => {
         return res.status(400).json({ error: 'Username and password are required.' });
     }
     if (username.trim() === 'rupesh' && password === 'rupesh@12') {
+        // Set secure HttpOnly session cookie
+        res.setHeader('Set-Cookie', 'admin_auth=true; Path=/; HttpOnly; SameSite=Strict');
         res.json({ success: true, message: 'Admin logged in successfully!' });
     } else {
         res.status(401).json({ error: 'Access Denied: Invalid Admin credentials.' });
     }
 });
 
+// Admin Logout
+app.post('/api/admin/logout', (req, res) => {
+    res.setHeader('Set-Cookie', 'admin_auth=; Path=/; HttpOnly; Max-Age=0; SameSite=Strict');
+    res.json({ success: true, message: 'Logged out successfully' });
+});
+
 // Get Pending Registrations & All Users
-app.get('/api/admin/pending', (req, res) => {
+app.get('/api/admin/pending', requireAdminAuth, (req, res) => {
     const pendingFaculty = db.data.facultyUsers.filter(u => !u.approved);
     const pendingStudents = db.data.studentUsers.filter(s => !s.approved);
     const approvedFaculty = db.data.facultyUsers.filter(u => u.approved);
@@ -444,7 +472,7 @@ app.get('/api/admin/pending', (req, res) => {
 });
 
 // Approve or Reject Users
-app.post('/api/admin/approve', (req, res) => {
+app.post('/api/admin/approve', requireAdminAuth, (req, res) => {
     const { type, id, action } = req.body; // action: 'approve' or 'reject'
     if (!type || !id || !action) {
         return res.status(400).json({ error: 'Missing type, id, or action parameter.' });
@@ -470,7 +498,7 @@ app.post('/api/admin/approve', (req, res) => {
 });
 
 // Clear All Users (Reset Database)
-app.post('/api/admin/clear-all', (req, res) => {
+app.post('/api/admin/clear-all', requireAdminAuth, (req, res) => {
     try {
         db.clearAllUsers();
         res.json({ success: true, message: 'All faculty and student registrations have been cleared.' });

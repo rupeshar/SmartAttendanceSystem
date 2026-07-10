@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'admin-auth.html';
         return;
     }
+    
+    updateNavigationVisibility();
 
     // DOM Elements
     const btnLogout = document.getElementById('btn-admin-logout');
@@ -161,8 +163,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Logout
-    btnLogout.addEventListener('click', () => {
+    btnLogout.addEventListener('click', async () => {
         sessionStorage.removeItem('admin_authenticated');
+        try {
+            await fetch('/api/admin/logout', { method: 'POST' });
+        } catch (err) {
+            console.error('Failed to logout on backend:', err);
+        }
         window.location.href = 'index.html';
     });
 
@@ -201,3 +208,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial load
     loadDirectory();
 });
+
+function updateNavigationVisibility() {
+    const navAdmin = document.getElementById('nav-admin');
+    const navFaculty = document.getElementById('nav-faculty');
+    const navStudent = document.getElementById('nav-student');
+
+    const isAdmin = sessionStorage.getItem('admin_authenticated') === 'true';
+    const isFaculty = sessionStorage.getItem('faculty_authenticated') === 'true';
+    const isStudent = !!localStorage.getItem('attendance_student_roll');
+
+    if (navAdmin) navAdmin.style.display = 'none';
+
+    if (isAdmin) {
+        if (navAdmin) navAdmin.style.display = 'inline-block';
+        if (navFaculty) navFaculty.style.display = 'inline-block';
+        if (navStudent) navStudent.style.display = 'inline-block';
+    } else if (isFaculty) {
+        if (navAdmin) navAdmin.style.display = 'none';
+        if (navFaculty) navFaculty.style.display = 'inline-block';
+        if (navStudent) navStudent.style.display = 'none';
+    } else if (isStudent) {
+        if (navAdmin) navAdmin.style.display = 'none';
+        if (navFaculty) navFaculty.style.display = 'none';
+        if (navStudent) navStudent.style.display = 'inline-block';
+    } else {
+        if (navAdmin) navAdmin.style.display = 'none';
+        if (navFaculty) navFaculty.style.display = 'inline-block';
+        if (navStudent) navStudent.style.display = 'inline-block';
+    }
+}

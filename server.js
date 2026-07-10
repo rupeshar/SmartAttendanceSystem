@@ -232,7 +232,7 @@ class JSONDatabase {
         );
     }
 
-    registerStudent(rollNumber, name, email, photoPath) {
+    registerStudent(rollNumber, name, email, password, photoPath) {
         const cleanRoll = rollNumber.trim().toUpperCase();
         const exists = this.data.studentUsers.some(s => s.rollNumber === cleanRoll);
         if (exists) {
@@ -243,6 +243,7 @@ class JSONDatabase {
             rollNumber: cleanRoll, 
             name: name.trim(), 
             email: email.trim().toLowerCase(), 
+            password: password,
             passportPhotoUrl: photoPath, 
             approved: false 
         });
@@ -358,12 +359,12 @@ app.post('/api/faculty/login', (req, res) => {
 
 // Student Registration
 app.post('/api/student/register', (req, res) => {
-    const { rollNumber, name, email, passportImage } = req.body;
-    if (!rollNumber || !name || !email || !passportImage) {
-        return res.status(400).json({ error: 'Roll number, student name, email, and passport photo are required.' });
+    const { rollNumber, name, email, password, passportImage } = req.body;
+    if (!rollNumber || !name || !email || !password || !passportImage) {
+        return res.status(400).json({ error: 'Roll number, student name, email, password, and passport photo are required.' });
     }
-    if (rollNumber.trim().length < 2 || name.trim().length < 2 || !email.includes('@')) {
-        return res.status(400).json({ error: 'Please enter a valid roll number, name, and email address.' });
+    if (rollNumber.trim().length < 2 || name.trim().length < 2 || !email.includes('@') || password.trim().length < 4) {
+        return res.status(400).json({ error: 'Please enter a valid roll number, name, email, and at least 4-character password.' });
     }
     
     // Save passport image file
@@ -388,11 +389,37 @@ app.post('/api/student/register', (req, res) => {
     }
 
     try {
-        db.registerStudent(rollNumber, name, email, photoPath);
+        db.registerStudent(rollNumber, name, email, password, photoPath);
         res.json({ success: true, message: 'Registration submitted! Please wait for Admin approval.' });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
+});
+
+// Student Login
+app.post('/api/student/login', (req, res) => {
+    const { rollNumber, password } = req.body;
+    if (!rollNumber || !password) {
+        return res.status(400).json({ error: 'Roll number and password are required.' });
+    }
+    const cleanRoll = rollNumber.trim().toUpperCase();
+    const student = db.data.studentUsers.find(s => s.rollNumber === cleanRoll);
+    if (!student) {
+        return res.status(400).json({ error: 'Roll number is not registered. Please register first.' });
+    }
+    if (student.password !== password) {
+        return res.status(401).json({ error: 'Incorrect password.' });
+    }
+    if (!student.approved) {
+        return res.status(403).json({ error: 'Access Denied: Your account is pending admin approval.' });
+    }
+    res.json({ 
+        success: true, 
+        message: 'Login successful!',
+        name: student.name,
+        email: student.email,
+        passportPhotoUrl: student.passportPhotoUrl || ''
+    });
 });
 
 // Check Student Status

@@ -30,6 +30,8 @@ const studentRollReg = document.getElementById('student-roll-reg');
 const studentRollLogin = document.getElementById('student-roll-login');
 const studentEmail = document.getElementById('student-email');
 const studentPhoto = document.getElementById('student-photo');
+const studentPasswordLogin = document.getElementById('student-password-login');
+const studentPasswordReg = document.getElementById('student-password-reg');
 const btnRegisterStudent = document.getElementById('btn-register-student');
 const btnLoginStudent = document.getElementById('btn-login-student');
 
@@ -72,11 +74,47 @@ window.addEventListener('DOMContentLoaded', () => {
     if (btnLoginStudent) {
         btnLoginStudent.addEventListener('click', async () => {
             const roll = studentRollLogin.value.trim();
-            if (!roll) {
-                showAlert('Please enter your Roll Number to log in.', 'error');
+            const password = studentPasswordLogin.value;
+            if (!roll || !password) {
+                showAlert('Please enter both Roll Number and Password to log in.', 'error');
                 return;
             }
-            await checkStatus(roll);
+            
+            const statusMsg = document.getElementById('registration-status-msg');
+            statusMsg.style.display = 'block';
+            statusMsg.textContent = 'Logging in...';
+            statusMsg.style.background = 'rgba(0, 0, 0, 0.05)';
+            statusMsg.style.color = 'var(--text-muted)';
+            
+            try {
+                const response = await fetch('/api/student/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rollNumber: roll, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('attendance_student_roll', roll);
+                    if (data.name) localStorage.setItem('attendance_student_name', data.name);
+                    if (data.email) localStorage.setItem('attendance_student_email', data.email);
+                    if (data.passportPhotoUrl) localStorage.setItem('attendance_student_passport', data.passportPhotoUrl);
+                    
+                    showAlert('Login successful!', 'success');
+                    await checkStatus(roll);
+                } else {
+                    showAlert(data.error || 'Login failed.', 'error');
+                    statusMsg.textContent = `❌ ${data.error || 'Login failed.'}`;
+                    statusMsg.style.background = 'rgba(239, 68, 68, 0.1)';
+                    statusMsg.style.color = '#ef4444';
+                    statusMsg.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                }
+            } catch (err) {
+                console.error('Student login error:', err);
+                showAlert('Network error logging in. Please try again.', 'error');
+                statusMsg.textContent = '❌ Network error logging in.';
+            }
         });
     }
     if (linkShowStudentRegister) {
@@ -356,10 +394,16 @@ async function registerStudent() {
     const roll = studentRollReg.value.trim();
     const name = studentName.value.trim();
     const email = studentEmail.value.trim();
+    const password = studentPasswordReg.value;
     const photoFile = studentPhoto.files[0];
     
-    if (!roll || !name || !email) {
-        showAlert('Please enter Roll Number, Full Name, and Email to register.', 'error');
+    if (!roll || !name || !email || !password) {
+        showAlert('Please enter Roll Number, Full Name, Email, and Password to register.', 'error');
+        return;
+    }
+    
+    if (password.length < 4) {
+        showAlert('Password must be at least 4 characters long.', 'error');
         return;
     }
     
@@ -414,7 +458,7 @@ async function registerStudent() {
                 const response = await fetch('/api/student/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ rollNumber: roll, name, email, passportImage })
+                    body: JSON.stringify({ rollNumber: roll, name, email, password, passportImage })
                 });
                 
                 const data = await response.json();

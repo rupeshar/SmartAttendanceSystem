@@ -48,31 +48,46 @@
         <div class="panel-card" id="student-info-panel">
             <h2 class="panel-title">1. Student Registration & Status</h2>
             
-            <!-- Registration Inputs View -->
+            <!-- Registration & Login Inputs View -->
             <div id="student-form-fields">
-                <div class="form-group">
-                    <label for="student-roll">Roll Number / ID</label>
-                    <input type="text" id="student-roll" class="input-field" placeholder="e.g. 101">
-                </div>
-                <div class="form-group">
-                    <label for="student-name">Full Name</label>
-                    <input type="text" id="student-name" class="input-field" placeholder="e.g. Rupesh Kumar">
-                </div>
-                <div class="form-group">
-                    <label for="student-email">Email Address</label>
-                    <input type="email" id="student-email" class="input-field" placeholder="e.g. rupesh@example.com">
-                </div>
-                <div class="form-group">
-                    <label for="student-photo">Upload Passport Photo (Face Matching)</label>
-                    <input type="file" id="student-photo" class="input-field" accept="image/*" style="padding-top: 0.5rem;">
-                </div>
-                <div style="display: flex; gap: 0.75rem;">
-                    <button type="button" class="btn btn-secondary" id="btn-register-student" style="flex: 1; padding: 0.8rem 1rem;">
-                        📝 Register
+                <!-- Login Tab View -->
+                <div id="student-login-view">
+                    <div class="form-group">
+                        <label for="student-roll-login">Roll Number / ID</label>
+                        <input type="text" id="student-roll-login" class="input-field" placeholder="e.g. 101">
+                    </div>
+                    <button type="button" class="btn btn-primary" id="btn-login-student" style="width: 100%; padding: 0.8rem 1rem; margin-top: 0.5rem;">
+                        🔑 Log In
                     </button>
-                    <button type="button" class="btn btn-primary" id="btn-verify-status" style="flex: 1; padding: 0.8rem 1rem;">
-                        🔍 Verify Status
+                    <p style="text-align: center; margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+                        New student? <a href="#" id="link-show-student-register" style="color: var(--primary); font-weight: 600;">Register here</a>
+                    </p>
+                </div>
+
+                <!-- Register Tab View (Initially Hidden) -->
+                <div id="student-register-view" style="display: none;">
+                    <div class="form-group">
+                        <label for="student-roll-reg">Roll Number / ID</label>
+                        <input type="text" id="student-roll-reg" class="input-field" placeholder="e.g. 101">
+                    </div>
+                    <div class="form-group">
+                        <label for="student-name">Full Name</label>
+                        <input type="text" id="student-name" class="input-field" placeholder="e.g. Rupesh Kumar">
+                    </div>
+                    <div class="form-group">
+                        <label for="student-email">Email Address</label>
+                        <input type="email" id="student-email" class="input-field" placeholder="e.g. rupesh@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="student-photo">Upload Passport Photo (Face Matching)</label>
+                        <input type="file" id="student-photo" class="input-field" accept="image/*" style="padding-top: 0.5rem;">
+                    </div>
+                    <button type="button" class="btn btn-secondary" id="btn-register-student" style="width: 100%; padding: 0.8rem 1rem; margin-top: 0.5rem;">
+                        📝 Submit Registration
                     </button>
+                    <p style="text-align: center; margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+                        Already registered? <a href="#" id="link-show-student-login" style="color: var(--primary); font-weight: 600;">Log in here</a>
+                    </p>
                 </div>
             </div>
 

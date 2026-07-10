@@ -26,11 +26,17 @@ const profileDisplayEmail = document.getElementById('profile-display-email');
 const btnStudentLogout = document.getElementById('btn-student-logout');
 
 const studentName = document.getElementById('student-name');
-const studentRoll = document.getElementById('student-roll');
+const studentRollReg = document.getElementById('student-roll-reg');
+const studentRollLogin = document.getElementById('student-roll-login');
 const studentEmail = document.getElementById('student-email');
 const studentPhoto = document.getElementById('student-photo');
 const btnRegisterStudent = document.getElementById('btn-register-student');
-const btnVerifyStatus = document.getElementById('btn-verify-status');
+const btnLoginStudent = document.getElementById('btn-login-student');
+
+const studentLoginView = document.getElementById('student-login-view');
+const studentRegisterView = document.getElementById('student-register-view');
+const linkShowStudentRegister = document.getElementById('link-show-student-register');
+const linkShowStudentLogin = document.getElementById('link-show-student-login');
 
 const locationPanel = document.getElementById('location-panel');
 const gpsIndicator = document.getElementById('gps-indicator');
@@ -63,7 +69,30 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Event Wireup
     if (btnRegisterStudent) btnRegisterStudent.addEventListener('click', registerStudent);
-    if (btnVerifyStatus) btnVerifyStatus.addEventListener('click', verifyStatus);
+    if (btnLoginStudent) {
+        btnLoginStudent.addEventListener('click', async () => {
+            const roll = studentRollLogin.value.trim();
+            if (!roll) {
+                showAlert('Please enter your Roll Number to log in.', 'error');
+                return;
+            }
+            await checkStatus(roll);
+        });
+    }
+    if (linkShowStudentRegister) {
+        linkShowStudentRegister.addEventListener('click', (e) => {
+            e.preventDefault();
+            studentLoginView.style.display = 'none';
+            studentRegisterView.style.display = 'block';
+        });
+    }
+    if (linkShowStudentLogin) {
+        linkShowStudentLogin.addEventListener('click', (e) => {
+            e.preventDefault();
+            studentRegisterView.style.display = 'none';
+            studentLoginView.style.display = 'block';
+        });
+    }
     if (btnStudentLogout) btnStudentLogout.addEventListener('click', logoutStudent);
     btnGetStudentGps.addEventListener('click', authorizeGPS);
     btnToggleSelfie.addEventListener('click', toggleSelfieCamera);
@@ -99,7 +128,8 @@ async function loadProfile() {
     initFaceApi();
     
     if (savedRoll) {
-        studentRoll.value = savedRoll;
+        if (studentRollLogin) studentRollLogin.value = savedRoll;
+        if (studentRollReg) studentRollReg.value = savedRoll;
         if (savedName) studentName.value = savedName;
         if (savedEmail) studentEmail.value = savedEmail;
         
@@ -200,7 +230,8 @@ function logoutStudent() {
     localStorage.removeItem('attendance_student_email');
     localStorage.removeItem('attendance_student_passport');
     
-    studentRoll.value = '';
+    if (studentRollLogin) studentRollLogin.value = '';
+    if (studentRollReg) studentRollReg.value = '';
     studentName.value = '';
     studentEmail.value = '';
     if (studentPhoto) studentPhoto.value = '';
@@ -209,6 +240,8 @@ function logoutStudent() {
     faceMatchVerified = false;
     
     studentFormFields.style.display = 'block';
+    studentLoginView.style.display = 'block';
+    studentRegisterView.style.display = 'none';
     studentProfileView.style.display = 'none';
     
     const statusMsg = document.getElementById('registration-status-msg');
@@ -320,7 +353,7 @@ async function verifyFaceIdentity() {
 
 // Register student account
 async function registerStudent() {
-    const roll = studentRoll.value.trim();
+    const roll = studentRollReg.value.trim();
     const name = studentName.value.trim();
     const email = studentEmail.value.trim();
     const photoFile = studentPhoto.files[0];

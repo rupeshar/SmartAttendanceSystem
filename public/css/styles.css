@@ -186,10 +186,6 @@ nav a:hover, nav a.active {
     box-shadow: 0 5px 15px rgba(31, 38, 135, 0.03);
 }
 
-#nav-admin {
-    display: none;
-}
-
 /* Main Layout */
 main {
     flex: 1;

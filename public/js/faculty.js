@@ -69,7 +69,6 @@ window.addEventListener('DOMContentLoaded', () => {
     btnStopSession.addEventListener('click', stopSession);
     btnExportCsv.addEventListener('click', exportAttendanceCSV);
     btnClearRecords.addEventListener('click', clearRecords);
-    updateNavigationVisibility();
 });
 
 // Preset coords helper for testing (called from HTML onclick)
@@ -489,34 +488,4 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
-}
-
-function updateNavigationVisibility() {
-    const navAdmin = document.getElementById('nav-admin');
-    const navFaculty = document.getElementById('nav-faculty');
-    const navStudent = document.getElementById('nav-student');
-
-    const isAdmin = sessionStorage.getItem('admin_authenticated') === 'true';
-    const isFaculty = sessionStorage.getItem('faculty_authenticated') === 'true';
-    const isStudent = !!localStorage.getItem('attendance_student_roll');
-
-    if (navAdmin) navAdmin.style.display = 'none';
-
-    if (isAdmin) {
-        if (navAdmin) navAdmin.style.display = 'inline-block';
-        if (navFaculty) navFaculty.style.display = 'inline-block';
-        if (navStudent) navStudent.style.display = 'inline-block';
-    } else if (isFaculty) {
-        if (navAdmin) navAdmin.style.display = 'none';
-        if (navFaculty) navFaculty.style.display = 'inline-block';
-        if (navStudent) navStudent.style.display = 'none';
-    } else if (isStudent) {
-        if (navAdmin) navAdmin.style.display = 'none';
-        if (navFaculty) navFaculty.style.display = 'none';
-        if (navStudent) navStudent.style.display = 'inline-block';
-    } else {
-        if (navAdmin) navAdmin.style.display = 'none';
-        if (navFaculty) navFaculty.style.display = 'inline-block';
-        if (navStudent) navStudent.style.display = 'inline-block';
-    }
 }

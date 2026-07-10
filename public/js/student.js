@@ -918,45 +918,49 @@ function toggleCameraScanner() {
         });
     } else {
         // Stop selfie stream if running to prevent camera conflicts
+        let delay = 0;
         if (selfieStream) {
             stopSelfieCamera();
+            delay = 350; // Give 350ms delay for browser to fully release hardware webcam tracks
         }
 
-        // Start scanning
-        placeholder.style.display = 'none';
-        btnToggleCamera.textContent = '🛑 Stop Camera Scanner';
-        btnToggleCamera.className = 'btn btn-outline';
-        btnToggleCamera.style.borderColor = 'var(--accent-red)';
-        btnToggleCamera.style.color = 'var(--accent-red)';
+        setTimeout(() => {
+            // Start scanning
+            placeholder.style.display = 'none';
+            btnToggleCamera.textContent = '🛑 Stop Camera Scanner';
+            btnToggleCamera.className = 'btn btn-outline';
+            btnToggleCamera.style.borderColor = 'var(--accent-red)';
+            btnToggleCamera.style.color = 'var(--accent-red)';
 
-        html5QrcodeScanner = new Html5Qrcode("reader");
-        
-        const startScanner = (cameraConfig) => {
-            return html5QrcodeScanner.start(
-                cameraConfig,
-                {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 }
-                },
-                (decodedText) => {
-                    // Success: parsed QR code content
-                    handleDecodedQR(decodedText);
-                },
-                (errorMessage) => {
-                    // scanning error (normal, ignore to keep scanning)
-                }
-            );
-        };
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            
+            const startScanner = (cameraConfig) => {
+                return html5QrcodeScanner.start(
+                    cameraConfig,
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 }
+                    },
+                    (decodedText) => {
+                        // Success: parsed QR code content
+                        handleDecodedQR(decodedText);
+                    },
+                    (errorMessage) => {
+                        // scanning error (normal, ignore to keep scanning)
+                    }
+                );
+            };
 
-        // Try environment (back) camera first, fallback to user (front) or default if it fails
-        startScanner({ facingMode: "environment" }).catch(err => {
-            console.warn('Environment camera failed, trying fallback configurations...', err);
-            startScanner({}).catch(errFallback => {
-                console.error('Camera startup error:', errFallback);
-                showAlert('Failed to open camera: ' + errFallback + '. Please verify browser camera permissions.', 'error');
-                toggleCameraScanner(); // reset
+            // Try environment (back) camera first, fallback to user (front) or default if it fails
+            startScanner({ facingMode: "environment" }).catch(err => {
+                console.warn('Environment camera failed, trying fallback configurations...', err);
+                startScanner({}).catch(errFallback => {
+                    console.error('Camera startup error:', errFallback);
+                    showAlert('Failed to open camera: ' + errFallback + '. Please verify browser camera permissions.', 'error');
+                    toggleCameraScanner(); // reset
+                });
             });
-        });
+        }, delay);
     }
 }
 

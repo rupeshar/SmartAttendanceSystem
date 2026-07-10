@@ -721,3 +721,16 @@ footer {
     letter-spacing: 0.5px;
     margin-top: 0.15rem;
 }
+
+/* HTML5 QR Code Scanner styling overrides */
+#reader {
+    width: 100% !important;
+    height: 100% !important;
+    border: none !important;
+    background: #000 !important;
+}
+#reader video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}

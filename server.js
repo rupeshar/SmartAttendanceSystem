@@ -623,7 +623,7 @@ app.post('/api/attendance/submit', (req, res) => {
 
     if (!isInsideGeofence) {
         return res.status(400).json({
-            error: `Geolocation verification failed. You are outside the classroom boundary. (Distance: ${Math.round(distance)}m, Allowed Radius: ${session.radius}m)`
+            error: `Geolocation verification failed. You are outside the classroom boundary. (Distance: ${Math.round(distance)}m, Allowed Radius: ${session.radius}m). \nYour Location: [${parseFloat(latitude).toFixed(6)}, ${parseFloat(longitude).toFixed(6)}] \nClassroom Location: [${session.latitude.toFixed(6)}, ${session.longitude.toFixed(6)}]. \nTip: Ask the Faculty to increase the Allowed Radius to 99999m, or use the "Use Current Device Location" button on both devices to synchronize.`
         });
     }
 

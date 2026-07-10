@@ -488,7 +488,7 @@ async function registerStudent() {
 
 // Verify student status button click
 async function verifyStatus() {
-    const roll = studentRoll.value.trim();
+    const roll = (studentRollLogin ? studentRollLogin.value.trim() : '') || (studentRollReg ? studentRollReg.value.trim() : '');
     if (!roll) {
         showAlert('Please enter your Roll Number to check registration status.', 'error');
         return;
@@ -785,8 +785,8 @@ function generatePlacard() {
 
     ctx.fillStyle = '#ffffff';
     ctx.font = '16px Plus Jakarta Sans, sans-serif';
-    ctx.fillText(`Student: ${studentName.value}`, 200, 130);
-    ctx.fillText(`Roll No: ${studentRoll.value}`, 200, 160);
+    ctx.fillText(`Student: ${localStorage.getItem('attendance_student_name') || ''}`, 200, 130);
+    ctx.fillText(`Roll No: ${localStorage.getItem('attendance_student_roll') || ''}`, 200, 160);
 
     ctx.fillStyle = '#10b981';
     ctx.font = 'bold 14px Plus Jakarta Sans, sans-serif';
@@ -801,12 +801,12 @@ function generatePlacard() {
 
 // Submit Attendance to Backend API
 async function submitAttendance() {
-    const name = studentName.value.trim();
-    const roll = studentRoll.value.trim();
+    const roll = localStorage.getItem('attendance_student_roll');
+    const name = localStorage.getItem('attendance_student_name');
     const sId = sessionIdInput.value.trim();
 
     if (!name || !roll) {
-        showAlert('Please set your Student Profile details in Step 1 first.', 'error');
+        showAlert('Please log in or register your Student Profile in Step 1 first.', 'error');
         infoPanel.style.display = 'block';
         return;
     }
@@ -904,12 +904,18 @@ function toggleCameraScanner() {
     
     if (html5QrcodeScanner) {
         // Stop scanning
-        html5QrcodeScanner.clear().then(() => {
+        html5QrcodeScanner.stop().then(() => {
             html5QrcodeScanner = null;
             placeholder.style.display = 'flex';
             btnToggleCamera.textContent = '🎥 Start Camera Scanner';
             btnToggleCamera.className = 'btn btn-outline';
-        }).catch(err => console.error(err));
+        }).catch(err => {
+            console.error('Error stopping QR scanner:', err);
+            html5QrcodeScanner = null;
+            placeholder.style.display = 'flex';
+            btnToggleCamera.textContent = '🎥 Start Camera Scanner';
+            btnToggleCamera.className = 'btn btn-outline';
+        });
     } else {
         // Stop selfie stream if running to prevent camera conflicts
         if (selfieStream) {
@@ -924,23 +930,32 @@ function toggleCameraScanner() {
         btnToggleCamera.style.color = 'var(--accent-red)';
 
         html5QrcodeScanner = new Html5Qrcode("reader");
-        html5QrcodeScanner.start(
-            { facingMode: "environment" }, // back camera
-            {
-                fps: 10,
-                qrbox: { width: 250, height: 250 }
-            },
-            (decodedText) => {
-                // Success: parsed QR code content
-                handleDecodedQR(decodedText);
-            },
-            (errorMessage) => {
-                // scanning error (normal, ignore to keep scanning)
-            }
-        ).catch(err => {
-            console.error('Camera startup error:', err);
-            showAlert('Failed to open camera: ' + err, 'error');
-            toggleCameraScanner(); // reset
+        
+        const startScanner = (cameraConfig) => {
+            return html5QrcodeScanner.start(
+                cameraConfig,
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                (decodedText) => {
+                    // Success: parsed QR code content
+                    handleDecodedQR(decodedText);
+                },
+                (errorMessage) => {
+                    // scanning error (normal, ignore to keep scanning)
+                }
+            );
+        };
+
+        // Try environment (back) camera first, fallback to user (front) or default if it fails
+        startScanner({ facingMode: "environment" }).catch(err => {
+            console.warn('Environment camera failed, trying fallback configurations...', err);
+            startScanner({}).catch(errFallback => {
+                console.error('Camera startup error:', errFallback);
+                showAlert('Failed to open camera: ' + errFallback + '. Please verify browser camera permissions.', 'error');
+                toggleCameraScanner(); // reset
+            });
         });
     }
 }

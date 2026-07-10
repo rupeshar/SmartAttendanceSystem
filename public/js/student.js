@@ -345,36 +345,64 @@ async function registerStudent() {
     reader.onerror = () => {
         showAlert('Failed to read passport photo file.', 'error');
     };
-    reader.onload = async function() {
-        const passportImage = reader.result;
-        statusMsg.textContent = 'Submitting registration...';
-        
-        try {
-            const response = await fetch('/api/student/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rollNumber: roll, name, email, passportImage })
-            });
+    reader.onload = function(e) {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = async function() {
+            // Compress using HTML Canvas to limit dimension and byte size
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 600;
+            const MAX_HEIGHT = 600;
+            let width = img.width;
+            let height = img.height;
             
-            const data = await response.json();
-            if (response.ok) {
-                localStorage.setItem('attendance_student_roll', roll);
-                localStorage.setItem('attendance_student_name', name);
-                localStorage.setItem('attendance_student_email', email);
-                showAlert('Registration request submitted!', 'success');
-                await checkStatus(roll);
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
             } else {
-                showAlert(data.error || 'Registration failed.', 'error');
-                statusMsg.textContent = `❌ ${data.error || 'Registration failed.'}`;
-                statusMsg.style.background = 'rgba(239, 68, 68, 0.1)';
-                statusMsg.style.color = '#ef4444';
-                statusMsg.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                }
             }
-        } catch (err) {
-            console.error('Register error:', err);
-            showAlert('Network error submitting registration.', 'error');
-            statusMsg.textContent = '❌ Network error submitting registration.';
-        }
+            
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            const passportImage = canvas.toDataURL('image/jpeg', 0.75);
+            statusMsg.textContent = 'Submitting registration...';
+            
+            try {
+                const response = await fetch('/api/student/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rollNumber: roll, name, email, passportImage })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    localStorage.setItem('attendance_student_roll', roll);
+                    localStorage.setItem('attendance_student_name', name);
+                    localStorage.setItem('attendance_student_email', email);
+                    showAlert('Registration request submitted!', 'success');
+                    await checkStatus(roll);
+                } else {
+                    showAlert(data.error || 'Registration failed.', 'error');
+                    statusMsg.textContent = `❌ ${data.error || 'Registration failed.'}`;
+                    statusMsg.style.background = 'rgba(239, 68, 68, 0.1)';
+                    statusMsg.style.color = '#ef4444';
+                    statusMsg.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                }
+            } catch (err) {
+                console.error('Register error:', err);
+                showAlert('Network error submitting registration.', 'error');
+                statusMsg.textContent = '❌ Network error submitting registration.';
+            }
+        };
     };
 }
 

@@ -233,6 +233,7 @@ async function checkStatus(rollNumber) {
                 studentProfileView.style.display = 'flex';
                 
                 showSubsequentPanels();
+                updateNavigationVisibility();
                 authorizeGPS();
             } else {
                 statusMsg.textContent = `⏳ Registration pending Admin approval. Please check back shortly.`;
@@ -287,6 +288,7 @@ function logoutStudent() {
     
     hideSubsequentPanels();
     showAlert('Signed out successfully. Please register or log in.', 'info');
+    updateNavigationVisibility();
 }
 
 // Load face-api models asynchronously at start

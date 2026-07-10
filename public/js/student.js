@@ -294,8 +294,8 @@ async function verifyFaceIdentity() {
         
         const matchPercentage = Math.round((1 - distance) * 100);
         
-        // Threshold: distance < 0.6 is a match
-        if (distance < 0.6) {
+        // Enforce 50% match requirement (matchPercentage >= 50)
+        if (matchPercentage >= 50) {
             faceMatchVerified = true;
             faceIndicator.className = 'status-indicator status-active';
             faceStatusText.textContent = `Verified (${matchPercentage}% Match)`;
@@ -304,7 +304,7 @@ async function verifyFaceIdentity() {
             faceMatchVerified = false;
             faceIndicator.className = 'status-indicator status-inactive';
             faceStatusText.textContent = `Mismatch (${matchPercentage}% Match)`;
-            showAlert(`Face Mismatch (${matchPercentage}% match). Your face does not match the registered passport photo. Please capture again clearly.`, 'error');
+            showAlert(`Face Mismatch (${matchPercentage}% match). Your face similarity is below the required 50% threshold. Please capture again clearly.`, 'error');
             capturedSelfieBase64 = null; // reset selfie snapshot
             selfiePreviewImg.style.display = 'none';
             selfieVideo.style.display = 'block';

@@ -495,9 +495,14 @@ function updateNavigationVisibility() {
     const navAdmin = document.getElementById('nav-admin');
     const navFaculty = document.getElementById('nav-faculty');
     const navStudent = document.getElementById('nav-student');
+    const nav = document.querySelector('header nav');
 
     const isAdmin = sessionStorage.getItem('admin_authenticated') === 'true';
     const isFaculty = sessionStorage.getItem('faculty_authenticated') === 'true';
+    const isStudent = !!localStorage.getItem('attendance_student_roll');
+    
+    const isStudentPage = window.location.pathname.includes('student.html');
+    const isFacultyPage = window.location.pathname.includes('faculty.html') || window.location.pathname.includes('faculty-auth.html');
 
     if (navAdmin) navAdmin.style.display = 'none';
 
@@ -505,14 +510,58 @@ function updateNavigationVisibility() {
         if (navAdmin) navAdmin.style.display = 'inline-block';
         if (navFaculty) navFaculty.style.display = 'inline-block';
         if (navStudent) navStudent.style.display = 'inline-block';
-    } else if (isFaculty) {
+    } else if (isFaculty || isFacultyPage) {
         if (navAdmin) navAdmin.style.display = 'none';
         if (navFaculty) navFaculty.style.display = 'inline-block';
         if (navStudent) navStudent.style.display = 'none';
+    } else if (isStudentPage && isStudent) {
+        if (navAdmin) navAdmin.style.display = 'none';
+        if (navFaculty) navFaculty.style.display = 'none';
+        if (navStudent) navStudent.style.display = 'inline-block';
     } else {
-        // By default, show faculty and student portal options, keep admin hidden
         if (navAdmin) navAdmin.style.display = 'none';
         if (navFaculty) navFaculty.style.display = 'inline-block';
         if (navStudent) navStudent.style.display = 'inline-block';
+    }
+
+    if (nav) {
+        let navLogout = document.getElementById('nav-logout');
+        const anyUserLoggedIn = isAdmin || isFaculty || (isStudentPage && isStudent);
+        
+        if (anyUserLoggedIn) {
+            if (!navLogout) {
+                navLogout = document.createElement('a');
+                navLogout.id = 'nav-logout';
+                navLogout.href = '#';
+                navLogout.style.color = '#ef4444';
+                navLogout.style.fontWeight = '600';
+                navLogout.textContent = 'Logout';
+                navLogout.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (isAdmin) {
+                        sessionStorage.removeItem('admin_authenticated');
+                        sessionStorage.removeItem('admin_token');
+                        fetch('/api/admin/logout', { method: 'POST' }).finally(() => {
+                            window.location.href = 'index.html';
+                        });
+                    } else if (isFaculty) {
+                        sessionStorage.removeItem('faculty_authenticated');
+                        sessionStorage.removeItem('faculty_username');
+                        window.location.href = 'index.html';
+                    } else if (isStudent) {
+                        localStorage.removeItem('attendance_student_roll');
+                        localStorage.removeItem('attendance_student_name');
+                        localStorage.removeItem('attendance_student_email');
+                        localStorage.removeItem('attendance_student_passport');
+                        window.location.href = 'index.html';
+                    }
+                });
+                nav.appendChild(navLogout);
+            }
+        } else {
+            if (navLogout) {
+                navLogout.remove();
+            }
+        }
     }
 }
